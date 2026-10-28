@@ -2,7 +2,7 @@
 // API Key 는 환경변수(GEMINI_API_KEY)에서만 읽는다.
 const { tools, handlers } = require('./tools.js');
 
-const MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+const MODEL = process.env.GEMINI_MODEL || 'gemini-flash-latest';
 const MAX_STEPS = 5;
 
 const SYSTEM =
@@ -32,7 +32,10 @@ const callGemini = async (key, contents) => {
       }),
     }
   );
-  if (!r.ok) throw new Error('Gemini 오류 (' + r.status + ')');
+  if (!r.ok) {
+    const detail = await r.json().catch(() => ({}));
+    throw new Error('Gemini 오류 (' + r.status + ') ' + ((detail.error && detail.error.message) || '') + ' [model: ' + MODEL + ']');
+  }
   return r.json();
 };
 
