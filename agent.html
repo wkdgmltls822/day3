@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>제주 여행 에이전트</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <style>
+        body { margin: 0; font-family: sans-serif; }
+        #bar { padding: 8px; display: flex; gap: 8px; }
+        #q { flex: 1; padding: 8px; }
+        #map { height: 55vh; }
+        #out { margin: 8px; }
+        #steps { color: #667; font-size: 13px; }
+        #reply { white-space: pre-wrap; margin-top: 6px; }
+    </style>
+</head>
+<body>
+    <div id="bar">
+        <input id="q" value="내일 비 올 것 같은데 서귀포에서 갈만한 곳 추천해줘" placeholder="예: 동쪽에서 아이랑 갈만한 곳">
+        <button id="go">물어보기</button>
+    </div>
+    <div id="map"></div>
+    <div id="out">
+        <div id="steps"></div>
+        <div id="reply"></div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // 에이전트 서버리스 함수 (vercel dev 또는 배포 주소에서 동작)
+        const API = "/api/agent"
+        // jeju_spots.json 에는 좌표가 없어서 지역 중심 좌표로 찍는다 (장소별 정확한 위치 아님)
+        const CENTER = { "동쪽":[33.46,126.88], "서쪽":[33.36,126.3], "서귀포":[33.25,126.56], "제주시":[33.51,126.52] }
+
+        const map = L.map("map").setView([33.38, 126.55], 10)
+        L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "© OpenStreetMap" }).addTo(map)
+        const layer = L.layerGroup().addTo(map)
+
+        const drawSpots = (spots) => {
+            layer.clearLayers()
+            spots.forEach((s, i) => {
+                const [lat, lon] = CENTER[s.area.split("(")[0]]
+                const angle = i / spots.length * 2 * Math.PI
+                const pos = [lat + Math.sin(angle) * 0.04, lon + Math.cos(angle) * 0.05]
+                L.marker(pos).addTo(layer).bindPopup(`<b>${s.name}</b><br>${s.area} · ${s.indoor ? "실내" : "야외"}<br>${s.description}`)
+            })
+            if (spots.length) map.setView(CENTER[spots[0].area.split("(")[0]], 11)
+        }
+
+        go.onclick = async () => {
+            steps.textContent = "에이전트가 생각 중..."
+            reply.textContent = ""
+            try {
+                const r = await fetch(API, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ message: q.value })
+                })
+                const d = await r.json()
+                if (d.error) throw new Error(d.error)
+                steps.textContent = "사용한 도구: " + d.calls.map(c => `${c.name}(${JSON.stringify(c.args)})`).join(" → ")
+                reply.textContent = d.reply
+                drawSpots(d.spots)
+            } catch (e) {
+                steps.textContent = ""
+                reply.textContent = "오류: " + e.message
+            }
+        }
+    </script>
+</body>
+</html>
