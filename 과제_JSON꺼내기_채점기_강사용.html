@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>JSON 과제 채점기</title>
+<style>
+:root{--bg:#f4f7fb;--card:#fff;--ink:#1f2d3b;--sub:#5b6b7b;--navy:#173a5e;--orange:#f07f13;--line:#e3e9f0;--soft:#eef4fb;--good:#2f8f4e;--goodBg:#e9f7ee;--bad:#c0392b;--badBg:#fdecea;--warn:#fff4e5}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#11161d;--card:#1a212b;--ink:#e6edf5;--sub:#9aa8b8;--navy:#9cc6f0;--line:#2c3644;--soft:#1f2a38;--goodBg:#16301f;--badBg:#3a1d1a;--warn:#3a2a14}}
+:root[data-theme="dark"]{--bg:#11161d;--card:#1a212b;--ink:#e6edf5;--sub:#9aa8b8;--navy:#9cc6f0;--line:#2c3644;--soft:#1f2a38;--goodBg:#16301f;--badBg:#3a1d1a;--warn:#3a2a14}
+*{box-sizing:border-box}html,body{margin:0}
+body{font-family:"Pretendard","Noto Sans KR","Malgun Gothic",sans-serif;background:var(--bg);color:var(--ink);font-size:16px;line-height:1.5}
+header{background:#173a5e;color:#fff;padding:16px 24px}
+header .k{color:#ffd29b;font-weight:800;font-size:.8em}header h1{margin:2px 0;font-size:1.3em}header p{margin:0;font-size:.85em;opacity:.9}
+.tabs{display:flex;gap:8px;padding:10px 24px;background:var(--card);border-bottom:1px solid var(--line)}
+.tabs button{border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:99px;padding:6px 16px;min-height:40px;font:inherit;font-weight:700;cursor:pointer}
+.tabs button.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+main{max-width:1400px;margin:0 auto;padding:20px 24px 60px}
+@media (max-width:700px){main,header,.tabs{padding-left:16px;padding-right:16px}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 20px;margin-bottom:16px}
+.drop{border:3px dashed var(--orange);border-radius:14px;padding:26px;text-align:center;font-weight:700;color:var(--orange);cursor:pointer}
+.drop.hov{background:var(--warn)}
+.row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;align-items:center}
+.go{background:var(--orange);color:#fff;border:0;border-radius:10px;padding:0 16px;min-height:42px;font:inherit;font-weight:800;cursor:pointer}
+.ghost{background:var(--soft);color:var(--navy);border:0;border-radius:10px;padding:0 14px;min-height:42px;font:inherit;font-weight:700;cursor:pointer}
+textarea{width:100%;min-height:90px;font-family:Consolas,monospace;font-size:13px;border:1.5px solid var(--line);border-radius:10px;padding:8px;background:var(--card);color:var(--ink)}
+input.n{width:80px;font:inherit;padding:6px 8px;border:1.5px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink)}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.9em}
+th{background:var(--soft);color:var(--navy);text-align:left;padding:8px 10px;white-space:nowrap}
+td{padding:7px 10px;border-top:1px solid var(--line);vertical-align:top}
+td.o{color:var(--good);font-weight:800;text-align:center}td.x{color:var(--bad);font-weight:800;text-align:center}
+td.sc{font-weight:900}
+.flag{display:inline-block;background:var(--warn);color:#9a4a08;border-radius:99px;padding:0 8px;font-size:.8em;margin:1px 2px}
+:root[data-theme="dark"] .flag{color:#ffd29b}
+.note{font-size:.85em;color:var(--sub)}
+details summary{cursor:pointer;color:var(--navy);font-weight:700}
+pre{white-space:pre-wrap;word-break:break-all;font-family:Consolas,"D2Coding",monospace;font-size:.85em;background:var(--soft);border-radius:8px;padding:6px 10px;margin:4px 0}
+.key{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:14px}
+@media (max-width:500px){.key{grid-template-columns:1fr}}
+.key .card{margin:0;break-inside:avoid}
+.key h3{margin:0 0 6px;color:var(--navy);font-size:1em}
+@media print{header,.tabs,.noprint{display:none}body{background:#fff}.card{border-color:#bbb}}
+</style></head><body>
+<header><div class="k">강사용 · 교육생 비공개</div><h1>JSON 꺼내기 개인 과제 — 채점기 · 번호별 정답표</h1>
+<p>학생 제출 파일(.txt)을 끌어다 놓으면 내 답을 다시 실행해 채점해요(학생 화면의 점수를 믿지 않고 새로 계산). 숨은 시험 데이터로 값 직접 적기도 걸러요.</p></header>
+<nav class="tabs"><button data-t="g" class="on">① 제출 채점</button><button data-t="k">② 번호별 문제 · 정답</button></nav>
+<main id="main"></main>
+<script>
+// ── 개인 과제 공통: 번호별 문제 만들기 + 채점 (학생용 · 강사용이 같은 코드를 씀) ──
+const HW_NAME = 'JSON 꺼내기 개인 과제 v1';
+const THEMES = [
+  { t: '제주 체험 공방 (연습용 가상 목록)', items: [['도자기 공방', 1], ['귤따기 농장', 0], ['승마 체험장', 0], ['향수 만들기 공방', 1], ['카약 체험장', 0], ['초콜릿 공방', 1], ['감귤 쿠키 교실', 1], ['오름 걷기 교실', 0], ['해녀 체험장', 0], ['천연 염색 공방', 1]] },
+  { t: '제주 먹거리 가게 (연습용 가상 목록)', items: [['귤 주스 가게', 1], ['바닷가 테라스 카페', 0], ['흑돼지 식당', 1], ['해변 푸드트럭', 0], ['동네 빵집', 1], ['고기국수집', 1], ['아이스크림 노점', 0], ['전통 찻집', 1], ['야시장 꼬치 가게', 0], ['보말 칼국수집', 1]] },
+  { t: '제주 볼거리 (연습용 가상 목록)', items: [['그림 전시관', 1], ['해안 산책로', 0], ['별 관측 언덕', 0], ['작은 수족관', 1], ['민속 전시관', 1], ['풍차 언덕', 0], ['꽃 정원', 0], ['책 박물관', 1], ['등대 전망대', 0], ['장난감 박물관', 1]] },
+];
+const AREAS = ['동쪽', '서쪽', '서귀포', '제주시'];
+function rng(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function shuffle(a, r) { for (let i = a.length - 1; i > 0; i--) { const j = r() * (i + 1) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; }
+const cnt = (items, f) => items.filter(f).length;
+
+function makeHW(no) {
+  no = Math.max(1, Math.min(99, no | 0));
+  const r = rng(no * 7919 + 13), th = THEMES[(no - 1) % THEMES.length];
+  const n = 7 + (r() * 3 | 0);                                   // 7 ~ 9 곳
+  let items, A, A2, S, tries = 0;
+  do {
+    items = shuffle(th.items.slice(), r).slice(0, n).map(([name, ind]) => ({ name, area: AREAS[r() * 4 | 0], indoor: !!ind, star: 1 + (r() * 5 | 0) }));
+    const byA = AREAS.map(a => [a, cnt(items, s => s.area === a)]).sort((x, y) => y[1] - x[1] || (r() - .5));
+    A = byA[0][0]; A2 = (byA.find(([a, c]) => a !== A && c >= 1) || [null])[0];
+    S = r() < .5 ? 3 : 4;
+    tries++;
+  } while ((cnt(items, s => s.area === A) < 2 || !A2 || cnt(items, s => s.star >= S) < 1 || cnt(items, s => s.star >= S) === n ||
+            cnt(items, s => s.indoor) < 1 || cnt(items, s => !s.indoor) < 1) && tries < 50);
+  const k = 2 + (r() * (n - 2) | 0);                              // 2 ~ n-1 번째
+  let xi; do { xi = r() * (n - 1) | 0; } while (xi === k - 1);
+  const ev = no % 3;                                              // 버튼 문제 3가지 모양
+  const btn = ev === 0 ? { label: '비 오는 날', cond: 's.indoor === true', say: '실내(indoor 가 true)인 곳 이름' }
+            : ev === 1 ? { label: '맑은 날', cond: 's.indoor === false', say: '야외(indoor 가 false)인 곳 이름' }
+            : { label: A2 + ' 보기', cond: `s.area === '${A2}'`, say: `지역이 ${A2} 인 곳 이름` };
+  const data = { 과제번호: no, 주제: th.t, items };
+  // 숨은 시험 데이터: 같은 모양 · 다른 값 (값을 직접 적은 답은 여기서 걸러짐)
+  const r2 = rng(no * 104729 + 7);
+  const hidden = { 과제번호: no, 주제: th.t, items: items.slice(0, n - 1).map(s => ({ name: s.name, area: AREAS[r2() * 4 | 0], indoor: r2() < .5, star: 1 + (r2() * 5 | 0) })) };
+  const Q = [
+    { no: 1, pt: 10, type: 'expr', q: `<b>${k}번째</b> 항목의 이름(name)을 꺼내세요. (0부터 세는 것 주의!)`, ans: `data.items[${k - 1}].name` },
+    { no: 2, pt: 5, type: 'expr', q: `항목이 <b>모두 몇 개</b>인지 꺼내세요.`, ans: `data.items.length` },
+    { no: 3, pt: 10, type: 'expr', q: `<b>${items[xi].name}</b> 의 별점(star)을 꺼내세요. 숫자를 직접 쓰지 말고 주소로!`, ans: `data.items[${xi}].star` },
+    { no: 4, pt: 15, type: 'code', q: `반복문으로 모든 항목을 <b>“이름 · 지역”</b> 모양으로 한 줄씩 보여 주세요. (예: ${items[0].name} · ${items[0].area})`, ans: "for (const s of data.items) {\n  show(s.name + ' · ' + s.area)\n}" },
+    { no: 5, pt: 20, type: 'code', q: `지역(area)이 <b>${A}</b> 인 곳의 이름만 보여 주세요.`, ans: `for (const s of data.items) {\n  if (s.area === '${A}') show(s.name)\n}` },
+    { no: 6, pt: 20, type: 'code', q: `별점(star)이 <b>${S} 이상</b>인 곳이 몇 개인지 세어서 숫자 하나만 보여 주세요.`, ans: `let n = 0\nfor (const s of data.items) {\n  if (s.star >= ${S}) n = n + 1\n}\nshow(n)` },
+    { no: 7, pt: 20, type: 'event', q: `<b>“${btn.label}”</b> 버튼을 만들고, 누르면 ${btn.say}이 모두 보이게 하세요. 만든 뒤 미니 화면에서 직접 눌러 보세요.`, ans: `button('${btn.label}', () => {\n  for (const s of data.items) {\n    if (${btn.cond}) show(s.name)\n  }\n})`, need: [btn.label] },
+  ];
+  return { no, data, hidden, Q, params: { n, k, x: items[xi].name, A, S, btn: btn.label } };
+}
+
+// ── 실행기: Worker (끝나지 않는 반복은 1.5초에 멈춤), 안 되면 바로 실행 ──
+const WSRC = `
+let BTN = {}, OUT = [];
+const fmt = v => typeof v === 'string' ? v : (v === undefined ? 'undefined' : JSON.stringify(v));
+const show = (...a) => { if (OUT.length < 500) OUT.push(a.map(fmt).join(' ')); };
+const button = (label, fn) => { BTN[String(label)] = fn; };
+onmessage = e => {
+  const m = e.data;
+  if (m.click != null) { OUT = []; let err = null; try { BTN[m.click] && BTN[m.click](); } catch (er) { err = String(er && er.message || er); } postMessage({ id: m.id, out: OUT, err }); return; }
+  BTN = {}; OUT = [];
+  try {
+    const f = new Function('data', 'show', 'button', m.mode === 'expr' ? 'return (' + m.code + '\\n)' : m.code);
+    const v = f(m.data, show, button);
+    let value; if (m.mode === 'expr') value = v === undefined ? { __undef: 1 } : JSON.parse(JSON.stringify(v));
+    let sims = null;
+    if (m.sim) sims = m.sim.map(l => { OUT = []; const has = !!BTN[l]; let err = null; try { has && BTN[l](); } catch (er) { err = String(er.message); } return { l, has, out: OUT.slice(), err }; });
+    postMessage({ id: m.id, ok: true, value, out: m.sim ? [] : OUT, buttons: Object.keys(BTN), sims });
+  } catch (er) { postMessage({ id: m.id, ok: false, err: String(er && er.message || er) }); }
+};`;
+let wURL = null; try { wURL = URL.createObjectURL(new Blob([WSRC], { type: 'text/javascript' })); } catch (e) {}
+function makeWorker() { try { return new Worker(wURL); } catch (e) { return null; } }
+let seq = 0;
+function runIn(w, msg) {
+  return new Promise(res => {
+    if (!w) return res(inlineRun(msg));
+    const id = ++seq; let done = false;
+    const t = setTimeout(() => { if (!done) { done = true; w.terminate(); res({ ok: false, err: '__TIMEOUT', dead: true }); } }, 1500);
+    w.onmessage = e => { if (e.data.id !== id || done) return; done = true; clearTimeout(t); res(e.data); };
+    w.onerror = e => { if (done) return; done = true; clearTimeout(t); e.preventDefault && e.preventDefault(); res({ ok: false, err: e.message || '문법 오류' }); };
+    w.postMessage(Object.assign({ id }, msg));
+  });
+}
+let IB = {}, IO = [];
+function inlineRun(m) {
+  const fmt = v => typeof v === 'string' ? v : (v === undefined ? 'undefined' : JSON.stringify(v));
+  const show = (...a) => { if (IO.length < 500) IO.push(a.map(fmt).join(' ')); };
+  const button = (l, fn) => { IB[String(l)] = fn; };
+  if (m.click != null) { IO = []; let err = null; try { IB[m.click] && IB[m.click](); } catch (er) { err = String(er.message); } return { out: IO, err }; }
+  IB = {}; IO = [];
+  try {
+    const f = new Function('data', 'show', 'button', m.mode === 'expr' ? 'return (' + m.code + '\n)' : m.code);
+    const v = f(JSON.parse(JSON.stringify(m.data)), show, button);
+    let value; if (m.mode === 'expr') value = v === undefined ? { __undef: 1 } : JSON.parse(JSON.stringify(v));
+    const saved = IB; let sims = null;
+    if (m.sim) sims = m.sim.map(l => { IO = []; const has = !!saved[l]; let err = null; try { has && saved[l](); } catch (er) { err = String(er.message); } return { l, has, out: IO.slice(), err }; });
+    return { ok: true, value, out: m.sim ? [] : IO, buttons: Object.keys(IB), sims };
+  } catch (er) { return { ok: false, err: String(er.message) }; }
+}
+const norm = a => JSON.stringify((a || []).map(x => String(x).replace(/\s+/g, '')));
+const sameVal = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+async function once(code, mode, data, sim) { const w = makeWorker(); const r = await runIn(w, { code, mode, data, sim }); if (w) w.terminate(); return r; }
+// 한 문제 채점: 원래 데이터 + 숨은 데이터 둘 다 맞아야 통과
+async function gradeQ(hw, q, code) {
+  if (!code || !code.trim()) return { pass: false, why: '빈 답' };
+  const mode = q.type === 'expr' ? 'expr' : 'code', sim = q.type === 'event' ? q.need : undefined;
+  const res = [];
+  for (const d of [hw.data, hw.hidden]) {
+    const [mine, exp] = [await once(code, mode, d, sim), await once(q.ans, mode, d, sim)];
+    if (!mine.ok) return { pass: false, why: mine.err, err: mine.err, first: res[0] };
+    let ok;
+    if (mode === 'expr') ok = sameVal(mine.value, exp.value);
+    else if (sim) ok = q.need.every(l => { const a = mine.sims.find(s => s.l === l), b = exp.sims.find(s => s.l === l); return a && a.has && norm(a.out) === norm(b.out); });
+    else ok = norm(mine.out) === norm(exp.out);
+    res.push({ ok, mine, exp });
+  }
+  const pass = res[0].ok && res[1].ok;
+  return { pass, firstOk: res[0].ok, hardcoded: res[0].ok && !res[1].ok, mine: res[0].mine, exp: res[0].exp };
+}
+function friendly(err) {
+  if (!err) return '';
+  if (err === '__TIMEOUT') return '반복이 끝나지 않아요(1.5초에서 멈췄어요) — 반복 조건을 확인하세요.';
+  let m;
+  if ((m = err.match(/Cannot read propert(?:y|ies) of (undefined|null) \(reading '([^']*)'\)/))) return `없는 서랍 안에서 '${m[2]}' 를 꺼내려고 했어요 — 앞부분 주소(철자 · 번호)부터 확인하세요.`;
+  if ((m = err.match(/^(\S+) is not defined/))) return `'${m[1]}' 라는 이름을 몰라요 — data 로 시작했나요? 글자라면 따옴표 ' ' 를 씌웠나요?`;
+  if (/is not a function/.test(err)) return '함수가 아닌 것을 ( ) 로 불렀어요 — 철자를 확인하세요.';
+  if (/Unexpected|missing \) |Invalid or unexpected/.test(err)) return '문법 모양이 어긋났어요 — 괄호 ( ) { } [ ] 와 따옴표 짝을 확인하세요.';
+  if (/Assignment to constant/.test(err)) return 'const 상자에는 다시 넣을 수 없어요 — let 으로.';
+  return '오류: ' + err;
+}
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+const SUBS = new Map();   // 수강번호 → 가장 늦은 제출
+const main = document.getElementById('main');
+let tab = 'g';
+document.querySelector('.tabs').onclick = e => { const b = e.target.closest('button'); if (!b) return; tab = b.dataset.t; document.querySelectorAll('.tabs button').forEach(x => x.classList.toggle('on', x === b)); draw(); };
+function draw() { tab === 'g' ? drawGrade() : drawKey(); }
+function drawGrade() {
+  main.innerHTML = `<div class="card noprint"><div class="drop" id="drop">여기에 제출 파일(.txt)을 여러 개 한꺼번에 끌어다 놓기 · 또는 눌러서 고르기</div>
+   <input type="file" id="fi" multiple accept=".txt,.json,text/plain" style="display:none">
+   <details style="margin-top:10px"><summary>파일 대신 복사한 제출 내용 붙여 넣기</summary><textarea id="pa" placeholder="학생이 ‘제출 내용 복사’로 보낸 글을 붙여 넣기 (여러 개면 이어서)"></textarea><div class="row"><button class="ghost" id="paB">붙여 넣은 내용 채점</button></div></details>
+   <div class="row"><button class="go" id="csvB">CSV 받기(엑셀)</button><button class="ghost" id="copyB">표 복사</button><button class="ghost" id="clrB">모두 지우기</button><span class="note" id="msg"></span></div></div>
+   <div class="card"><div class="tw"><table id="tb"></table></div><div class="note" style="margin-top:8px">같은 번호가 여러 번 들어오면 제출 시각이 가장 늦은 것만 남겨요. 표시: <span class="flag">자체점수 다름</span> = 학생 화면 점수와 재채점 점수가 다름 · <span class="flag">값 직접 적음</span> = 지금 데이터에선 맞지만 숨은 시험에서 틀림 · <span class="flag">남의 답?</span> = 내 번호에선 틀렸는데, 다른 학생 번호에선 맞은 코드와 글자까지 같음(베꼈을 가능성 — 확인용).</div></div>`;
+  const drop = document.getElementById('drop'), fi = document.getElementById('fi');
+  drop.onclick = () => fi.click();
+  drop.ondragover = e => { e.preventDefault(); drop.classList.add('hov'); };
+  drop.ondragleave = () => drop.classList.remove('hov');
+  drop.ondrop = e => { e.preventDefault(); drop.classList.remove('hov'); readFiles(e.dataTransfer.files); };
+  fi.onchange = () => readFiles(fi.files);
+  document.getElementById('paB').onclick = () => addTexts(document.getElementById('pa').value);
+  document.getElementById('csvB').onclick = csv;
+  document.getElementById('copyB').onclick = copyTable;
+  document.getElementById('clrB').onclick = () => { SUBS.clear(); table(); };
+  table();
+}
+async function readFiles(files) { let all = ''; for (const f of files) all += '\n' + await f.text(); addTexts(all); }
+function splitJSON(txt) {               // 붙여 넣은 글에서 { … } 덩어리 여러 개 꺼내기
+  const out = []; let d = 0, s = -1, inS = false, esc2 = false;
+  for (let i = 0; i < txt.length; i++) { const c = txt[i];
+    if (inS) { if (esc2) esc2 = false; else if (c === '\\') esc2 = true; else if (c === '"') inS = false; continue; }
+    if (c === '"') inS = true; else if (c === '{') { if (d++ === 0) s = i; } else if (c === '}') { if (--d === 0 && s >= 0) { out.push(txt.slice(s, i + 1)); s = -1; } } }
+  return out;
+}
+async function addTexts(txt) {
+  const msg = document.getElementById('msg'); let ok = 0, bad = 0;
+  for (const chunk of splitJSON(txt)) {
+    let b; try { b = JSON.parse(chunk); } catch (e) { bad++; continue; }
+    if (b.과제 !== HW_NAME || !b.수강번호) { bad++; continue; }
+    const prev = SUBS.get(b.수강번호); if (prev && prev.body.제출 > b.제출) continue;
+    msg.textContent = `채점 중… ${b.수강번호}번`;
+    const hw = makeHW(b.수강번호), g = [];
+    for (const q of hw.Q) g.push(await gradeQ(hw, q, (b.답 || {})[q.no] || ''));
+    SUBS.set(b.수강번호, { body: b, g, sc: hw.Q.reduce((a, q, i) => a + (g[i].pass ? q.pt : 0), 0) }); ok++;
+  }
+  msg.textContent = `✓ ${ok}건 채점` + (bad ? ` · 읽지 못함 ${bad}건(이 과제 파일이 아님)` : '');
+  table();
+}
+function rows() {
+  const list = [...SUBS.values()].sort((a, b) => a.body.수강번호 - b.body.수강번호);
+  const sig = {}; list.forEach(s => Object.entries(s.body.답 || {}).forEach(([k, v]) => { const t = String(v).replace(/\s+/g, ''); if (t) (sig[k + '|' + t] = sig[k + '|' + t] || []).push(s); }));
+  return list.map(s => {
+    const f = [];
+    if (s.sc !== s.body.자체점수) f.push('자체점수 다름');
+    if (s.g.some(x => x.hardcoded)) f.push('값 직접 적음 ' + s.g.map((x, i) => x.hardcoded ? i + 1 : null).filter(Boolean).join(','));
+    // 베낀 듯함: 내 번호에선 틀렸는데, 글자까지 같은 코드가 다른 학생 번호에선 맞은 경우
+    const same = Object.entries(s.body.답 || {}).filter(([k]) => !s.g[k - 1].pass).map(([k, v]) => {
+      const t = String(v).replace(/\s+/g, ''); const others = (sig[k + '|' + t] || []).filter(o => o !== s && o.g[k - 1].pass).map(o => o.body.수강번호);
+      return others.length ? `${k}번(${others.join('·')}번 답과 같음)` : null; }).filter(Boolean);
+    if (same.length) f.push('남의 답? ' + same.join(' '));
+    return { s, f };
+  });
+}
+function table() {
+  const tb = document.getElementById('tb'); if (!tb) return;
+  const R = rows();
+  tb.innerHTML = `<tr><th>번호</th><th>이름</th><th>제출 시각</th><th>걸린 분</th>${[1, 2, 3, 4, 5, 6, 7].map(i => `<th>${i}</th>`).join('')}<th>점수</th><th>표시</th><th>답 보기</th></tr>` +
+    (R.length ? R.map(({ s, f }) => `<tr><td>${s.body.수강번호}</td><td>${esc(s.body.이름 || '')}</td><td style="white-space:nowrap">${esc(s.body.제출 || '')}</td><td>${s.body.걸린시간_분 ?? ''}</td>` +
+      s.g.map(x => x.pass ? '<td class="o">○</td>' : '<td class="x">✗</td>').join('') + `<td class="sc">${s.sc}</td><td>${f.map(x => `<span class="flag">${esc(x)}</span>`).join('')}</td>` +
+      `<td><details><summary>보기</summary>${Object.entries(s.body.답 || {}).map(([k, v]) => `<div><b>${k}</b><pre>${esc(v || '(빈 답)')}</pre></div>`).join('')}</details></td></tr>`).join('')
+     : '<tr><td colspan="14" class="note">아직 제출 파일이 없어요.</td></tr>');
+}
+function tableData() { return [['번호', '이름', '제출 시각', '걸린 분', '1', '2', '3', '4', '5', '6', '7', '점수', '표시']].concat(rows().map(({ s, f }) => [s.body.수강번호, s.body.이름, s.body.제출, s.body.걸린시간_분].concat(s.g.map(x => x.pass ? 'O' : 'X'), [s.sc, f.join(' / ')]))); }
+function csv() {
+  const t = '﻿' + tableData().map(r => r.map(c => '"' + String(c ?? '').replace(/"/g, '""') + '"').join(',')).join('\r\n');
+  try { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([t], { type: 'text/csv;charset=utf-8' })); a.download = 'JSON과제_채점표.csv'; document.body.appendChild(a); a.click(); a.remove(); }
+  catch (e) { document.getElementById('msg').textContent = '파일을 받지 못했어요 — 표 복사를 쓰세요.'; }
+}
+async function copyTable() {
+  const t = tableData().map(r => r.join('\t')).join('\n');
+  try { await navigator.clipboard.writeText(t); document.getElementById('msg').textContent = '표를 복사했어요 — 엑셀에 붙여 넣기'; }
+  catch (e) { const x = document.createElement('textarea'); x.value = t; document.body.appendChild(x); x.select(); document.execCommand('copy'); x.remove(); document.getElementById('msg').textContent = '표를 복사했어요'; }
+}
+function drawKey() {
+  main.innerHTML = `<div class="card noprint"><div class="row" style="margin-top:0">번호 <input class="n" id="a" type="number" value="1" min="1" max="99"> ~ <input class="n" id="b" type="number" value="30" min="1" max="99"><button class="go" id="kB">보기</button><span class="note">번호마다 데이터 · 조건이 달라요. 인쇄(Ctrl + P)하면 정답표가 돼요.</span></div></div><div class="key" id="key"></div>`;
+  const go = () => { const a = Math.max(1, +document.getElementById('a').value | 0), b = Math.min(99, +document.getElementById('b').value | 0);
+    let h = ''; for (let no = a; no <= b; no++) { const hw = makeHW(no), p = hw.params;
+      h += `<div class="card"><h3>${no}번 · ${esc(hw.data.주제)} · ${p.n}곳</h3><div class="note">k=${p.k}번째 · 별점 대상 ${esc(p.x)} · 지역 ${p.A} · 별점 ${p.S} 이상 · 버튼 “${esc(p.btn)}”</div>` +
+        hw.Q.map(q => `<div><b>${q.no}.</b> ${q.q.replace(/<[^>]+>/g, '')}<pre>${esc(q.ans)}</pre></div>`).join('') + '</div>'; }
+    document.getElementById('key').innerHTML = h; };
+  document.getElementById('kB').onclick = go; go();
+}
+draw();
+</script>
+</body></html>

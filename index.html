@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>제주 관광지 지도</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <style>
+        body { margin: 0; font-family: sans-serif; }
+        #bar { padding: 8px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        #map { height: 70vh; }
+        #list { margin: 8px; }
+    </style>
+</head>
+<body>
+    <div id="bar">
+        <select id="area">
+            <option>동쪽</option><option>서쪽</option><option>서귀포</option><option>제주시</option>
+        </select>
+        <select id="indoor">
+            <option value="">실내/야외 전체</option>
+            <option value="true">실내</option>
+            <option value="false">야외</option>
+        </select>
+        <button id="go">찾기</button>
+        <span id="msg"></span>
+    </div>
+    <div id="map"></div>
+    <ol id="list"></ol>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // jeju_spots.json 에는 좌표가 없어서 지역 중심 좌표를 쓴다 (장소별 정확한 위치 아님)
+        const CENTER = { "동쪽":[33.46,126.88], "서쪽":[33.36,126.3], "서귀포":[33.25,126.56], "제주시":[33.51,126.52] }
+        let spots = []
+
+        // api/tools.js 의 find_spots 와 같은 규칙: 지역(괄호 앞부분) + 실내여부, 최대 8곳
+        const findSpots = (area, indoor) => spots
+            .filter(s => s.area.split("(")[0] === area)
+            .filter(s => indoor === null || s.indoor === indoor)
+            .slice(0, 8)
+
+        const map = L.map("map").setView([33.38, 126.55], 10)
+        L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "© OpenStreetMap" }).addTo(map)
+        const layer = L.layerGroup().addTo(map)
+
+        const show = (area, indoor) => {
+            const found = findSpots(area, indoor)
+            layer.clearLayers()
+            list.innerHTML = ""
+            msg.textContent = found.length ? found.length + "곳" : "조건에 맞는 곳이 목록에 없습니다."
+            found.forEach((s, i) => {
+                // 같은 중심에 겹치지 않게 원을 그리듯 조금씩 흩뜨려 찍는다
+                const angle = i / found.length * 2 * Math.PI
+                const [lat, lon] = CENTER[area]
+                const pos = [lat + Math.sin(angle) * 0.04, lon + Math.cos(angle) * 0.05]
+                L.marker(pos).addTo(layer).bindPopup(`<b>${s.name}</b><br>${s.area} · ${s.indoor ? "실내" : "야외"}<br>${s.type}`)
+                list.innerHTML += `<li>${s.name} (${s.area}, ${s.indoor ? "실내" : "야외"}) - ${s.type}</li>`
+            })
+            if (found.length) map.setView(CENTER[area], 11)
+        }
+
+        go.onclick = () => show(area.value, indoor.value === "" ? null : indoor.value === "true")
+
+        fetch("jeju_spots.json").then(r => r.json()).then(d => { spots = d.spots; go.onclick() })
+            .catch(() => msg.textContent = "jeju_spots.json 을 불러오지 못했습니다. 로컬 서버로 열어 주세요.")
+    </script>
+</body>
+</html>

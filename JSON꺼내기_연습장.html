@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>JSON 꺼내기 연습장</title>
+<style>
+:root{--bg:#fffaf2;--card:#fff;--ink:#1f2d3b;--sub:#5b6b7b;--navy:#173a5e;--blue:#1f6fc5;--orange:#f07f13;--line:#e3e9f0;--soft:#eef4fb;
+ --good:#2f8f4e;--goodBg:#e9f7ee;--bad:#c0392b;--badBg:#fdecea;--key:#8a4fd0;--str:#2f7a45;--num:#c25b00;--bool:#1f6fc5;--code:#0f2235}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#11161d;--card:#1a212b;--ink:#e6edf5;--sub:#9aa8b8;--navy:#9cc6f0;--line:#2c3644;--soft:#1f2a38;--goodBg:#16301f;--badBg:#3a1d1a;--key:#c9a6f5;--str:#8fd6a5;--num:#ffb37a;--bool:#8fc1f5}}
+:root[data-theme="dark"]{--bg:#11161d;--card:#1a212b;--ink:#e6edf5;--sub:#9aa8b8;--navy:#9cc6f0;--line:#2c3644;--soft:#1f2a38;--goodBg:#16301f;--badBg:#3a1d1a;--key:#c9a6f5;--str:#8fd6a5;--num:#ffb37a;--bool:#8fc1f5}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:"Pretendard","Noto Sans KR","Malgun Gothic",sans-serif;background:var(--bg);color:var(--ink);font-size:18px;line-height:1.55}
+header{background:linear-gradient(120deg,#173a5e,#1f6fc5);color:#fff;padding:18px 24px 14px}
+header .k{color:#ffd29b;font-weight:800;font-size:.8em}
+header h1{margin:2px 0 4px;font-size:1.45em;letter-spacing:-.02em}
+header p{margin:0;font-size:.88em;opacity:.95}
+.stars{margin-top:8px;font-size:.85em;font-weight:700}
+.tabs{display:flex;gap:8px;padding:12px 24px;background:var(--card);border-bottom:1px solid var(--line);overflow-x:auto;position:sticky;top:0;z-index:5}
+.tabs button{flex:none;border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:99px;padding:8px 14px;font:inherit;font-size:.82em;font-weight:700;cursor:pointer;min-height:42px}
+.tabs button.on{background:var(--navy);border-color:var(--navy);color:#fff}
+:root[data-theme="dark"] .tabs button.on{color:#11161d}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .tabs button.on{color:#11161d}}
+.tabs button .c{font-size:.85em;opacity:.8;margin-left:4px}
+.tabs button.all{border-color:var(--good)}
+main{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:20px;padding:20px 24px 60px;max-width:1500px;margin:0 auto}
+@media (max-width:900px){main{grid-template-columns:1fr;padding:14px 16px 50px}header,.tabs{padding-left:16px;padding-right:16px}}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 20px;min-width:0}
+.panel h2{margin:0 0 8px;font-size:1.05em;color:var(--navy)}
+.intro{background:var(--soft);border-radius:12px;padding:12px 16px;margin-bottom:14px;font-size:.92em}
+.intro b{color:var(--navy)}
+.intro code,.q code,.note code{font-family:"D2Coding",Consolas,monospace;background:rgba(127,127,127,.15);border-radius:5px;padding:1px 5px;font-size:.95em}
+/* 서랍장(트리) */
+.tree{font-family:"D2Coding",Consolas,"Noto Sans KR",monospace;font-size:.88em;max-height:68vh;overflow:auto;padding:4px 2px}
+.tree ul{list-style:none;margin:0;padding-left:20px;border-left:2px dashed var(--line)}
+.tree>ul{padding-left:0;border-left:0}
+.tree li{margin:2px 0}
+.tree .k{color:var(--key);font-weight:700}
+.tree .ix{color:var(--sub);font-weight:700}
+.tree .v{cursor:pointer;border-radius:5px;padding:0 4px}
+.tree .v:hover,.tree .v.sel{background:#ffe2c2;outline:2px solid var(--orange)}
+:root[data-theme="dark"] .tree .v:hover,:root[data-theme="dark"] .tree .v.sel{background:#4a3218}
+.tree .s{color:var(--str)}.tree .n{color:var(--num)}.tree .b{color:var(--bool)}
+.tree .tg{cursor:pointer;user-select:none;display:inline-block;width:20px;color:var(--orange);font-weight:800}
+.tree .pv{color:var(--sub);font-size:.92em}
+.tree .box{font-weight:800;color:var(--sub)}
+.addr{margin-top:12px;background:var(--code);color:#e8f1fb;border-radius:12px;padding:10px 14px;font-family:"D2Coding",Consolas,monospace;font-size:.92em;min-height:48px;word-break:break-all}
+.addr .lab{color:#9fc3e8;font-size:.82em;font-family:"Pretendard","Noto Sans KR",sans-serif;font-weight:700}
+.addr .p{color:#ffd29b;font-weight:700}
+/* 미션 */
+.mlist{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 14px}
+.mlist button{border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;min-width:44px;min-height:40px;font:inherit;font-weight:800;cursor:pointer}
+.mlist button.on{border-color:var(--orange);color:var(--orange)}
+.mlist button.ok{background:var(--goodBg);border-color:var(--good);color:var(--good)}
+.q{font-size:1.02em;font-weight:700;margin:4px 0 10px}
+.q .no{display:inline-block;background:var(--orange);color:#fff;border-radius:8px;padding:0 10px;margin-right:8px;font-size:.85em}
+.note{font-size:.86em;color:var(--sub);margin:6px 0}
+textarea,input.expr{width:100%;font-family:"D2Coding",Consolas,"Noto Sans KR",monospace;font-size:16px;background:var(--code);color:#e8f1fb;border:2px solid #2b5a88;border-radius:12px;padding:12px 14px;line-height:1.55;outline:none;tab-size:2}
+textarea:focus,input.expr:focus{border-color:var(--orange)}
+textarea{min-height:170px;resize:vertical}
+.row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.row button{border:0;border-radius:12px;padding:0 16px;min-height:46px;font:inherit;font-size:.92em;font-weight:800;cursor:pointer}
+.go{background:var(--orange);color:#fff}
+.ghost{background:var(--soft);color:var(--navy)}
+.res{margin-top:14px;border-radius:12px;padding:12px 14px;border:1px solid var(--line);font-size:.92em;display:none}
+.res.on{display:block}
+.res.ok{background:var(--goodBg);border-color:var(--good)}
+.res.bad{background:var(--badBg);border-color:var(--bad)}
+.res .t{font-weight:800;margin-bottom:6px}
+.res.ok .t{color:var(--good)}.res.bad .t{color:var(--bad)}
+.res pre{margin:4px 0;white-space:pre-wrap;word-break:break-all;font-family:"D2Coding",Consolas,"Noto Sans KR",monospace;font-size:.92em;background:rgba(127,127,127,.1);border-radius:8px;padding:8px 10px;max-height:240px;overflow:auto}
+.res .cmp{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:600px){.res .cmp{grid-template-columns:1fr}}
+.res .cmp div>b{font-size:.82em;color:var(--sub)}
+.hint{display:none;margin-top:10px;background:#fff4e5;border:1px solid #f0a24a;color:#7a4300;border-radius:12px;padding:10px 14px;font-size:.9em}
+:root[data-theme="dark"] .hint{background:#3a2a14;color:#ffd29b}
+.hint.on{display:block}
+.hint pre{margin:6px 0 0;white-space:pre-wrap;font-family:"D2Coding",Consolas,monospace}
+/* 이벤트 미니 화면 */
+.screen{margin-top:12px;border:2px solid var(--line);border-radius:14px;overflow:hidden;display:none}
+.screen.on{display:block}
+.screen .bar{background:var(--soft);padding:6px 12px;font-size:.78em;color:var(--sub);font-weight:700}
+.screen .btns{display:flex;flex-wrap:wrap;gap:8px;padding:12px}
+.screen .btns button{border:2px solid var(--orange);background:var(--card);color:var(--orange);border-radius:99px;padding:6px 16px;min-height:44px;font:inherit;font-weight:800;cursor:pointer}
+.screen .btns button.done{background:var(--orange);color:#fff}
+.screen .out{padding:4px 14px 14px;min-height:60px;font-size:.95em}
+.screen .out div{padding:3px 0;border-bottom:1px dashed var(--line)}
+.screen .empty{color:var(--sub);font-size:.88em}
+/* 퀴즈 */
+.opts{display:flex;flex-direction:column;gap:8px}
+.opts button{text-align:left;border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:12px;padding:10px 14px;font:inherit;font-size:.95em;cursor:pointer;min-height:46px}
+.opts button code{font-family:"D2Coding",Consolas,monospace}
+.opts button.right{border-color:var(--good);background:var(--goodBg)}
+.opts button.wrong{border-color:var(--bad);background:var(--badBg)}
+.fin{text-align:center;padding:20px 10px}
+.fin b{font-size:1.4em;color:var(--good)}
+.tools{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.tools button{border:1.5px solid var(--line);background:var(--card);color:var(--navy);border-radius:10px;padding:6px 12px;min-height:40px;font:inherit;font-size:.82em;font-weight:700;cursor:pointer}
+#own{min-height:220px;background:var(--card);color:var(--ink);border-color:var(--line)}
+.tiny{font-size:.78em;color:var(--sub)}
+footer{text-align:center;font-size:.78em;color:var(--sub);padding:0 16px 30px}
+</style></head><body>
+<header>
+ <div class="k">제주대 바이브코딩 초중급 · JSON 꺼내기 실습 데이</div>
+ <h1>JSON 꺼내기 연습장 — 서랍장에서 하나씩 꺼내 보자</h1>
+ <p>왼쪽 서랍장(JSON)을 눌러 보고, 오른쪽 미션을 풀어요. 맞으면 ✓ 가 쌓입니다. 코드는 한두 줄이면 충분해요.</p>
+ <div class="stars" id="stars"></div>
+</header>
+<nav class="tabs" id="tabs"></nav>
+<main>
+ <section class="panel">
+  <h2 id="treeTitle">서랍장 보기 — data</h2>
+  <div class="note" id="treeNote">▶ 를 누르면 서랍이 열려요. 값(글자 · 숫자)을 누르면 그 자리의 <b>주소</b>가 아래에 나와요.</div>
+  <div class="tree" id="tree"></div>
+  <div class="addr" id="addr"><span class="lab">주소 — 값을 하나 눌러 보세요</span></div>
+  <div class="tools" id="treeTools"></div>
+ </section>
+ <section class="panel" id="mission"></section>
+</main>
+<footer>관광지 목록은 강의용 근사값입니다 · 날씨 예시는 연습용으로 줄여 재구성한 Open-Meteo 응답 모양입니다 · 진행 기록은 이 브라우저에만 저장돼요</footer>
+<script>
+// ───────── 데이터 ─────────
+const SPOTS = {"version":2,"note":"강의용 관광지 목록(19곳) — 4일차 목록에 1일차 미리보기 장소를 합친 판입니다(4일차 파일을 덮어쓰세요). 좌표는 지도 표시용 근사값이고, 운영시간 · 요금 · 휴무는 바뀌므로 넣지 않았어요. 방문 전 공식 안내로 확인하세요.","areas":{"동쪽":[33.46,126.88],"서쪽":[33.36,126.3],"서귀포":[33.25,126.56],"제주시":[33.51,126.52]},"spots":[{"name":"성산일출봉","area":"동쪽","lat":33.4581,"lon":126.9425,"indoor":false,"desc":"바다 위로 솟은 분화구 오름"},{"name":"섭지코지","area":"동쪽","lat":33.424,"lon":126.9306,"indoor":false,"desc":"바닷가 산책길과 등대"},{"name":"아쿠아플라넷 제주","area":"동쪽","lat":33.433,"lon":126.9277,"indoor":true,"desc":"대형 아쿠아리움"},{"name":"만장굴","area":"동쪽","lat":33.5284,"lon":126.7714,"indoor":true,"desc":"용암동굴 — 비 영향이 적음"},{"name":"비자림","area":"동쪽","lat":33.4906,"lon":126.8102,"indoor":false,"desc":"비자나무 숲길"},{"name":"협재해수욕장","area":"서쪽","lat":33.394,"lon":126.2397,"indoor":false,"desc":"에메랄드빛 바다와 비양도"},{"name":"새별오름","area":"서쪽","lat":33.3657,"lon":126.3567,"indoor":false,"desc":"억새로 유명한 오름"},{"name":"오설록 티 뮤지엄","area":"서쪽","lat":33.3059,"lon":126.2894,"indoor":true,"desc":"녹차 박물관과 차밭"},{"name":"본태박물관","area":"서쪽","lat":33.303,"lon":126.395,"indoor":true,"desc":"건축과 전통 공예 전시"},{"name":"국립제주박물관","area":"제주시","lat":33.5139,"lon":126.5487,"indoor":true,"desc":"제주 역사 · 문화 전시"},{"name":"동문재래시장","area":"제주시","lat":33.5116,"lon":126.5262,"indoor":true,"desc":"지붕 있는 전통시장 먹거리"},{"name":"제주특별자치도 민속자연사박물관","area":"제주시","lat":33.5063,"lon":126.53,"indoor":true,"desc":"제주의 자연과 생활 전시"},{"name":"한라수목원","area":"제주시","lat":33.4697,"lon":126.493,"indoor":false,"desc":"도심 가까운 숲 산책"},{"name":"용두암","area":"제주시","lat":33.5164,"lon":126.4919,"indoor":false,"desc":"용머리 모양 바위 해안"},{"name":"천지연폭포","area":"서귀포","lat":33.2448,"lon":126.5594,"indoor":false,"desc":"서귀포 폭포 산책로"},{"name":"이중섭미술관","area":"서귀포","lat":33.2466,"lon":126.5652,"indoor":true,"desc":"서귀포 거리의 미술관"},{"name":"외돌개","area":"서귀포","lat":33.2398,"lon":126.545,"indoor":false,"desc":"바다에 홀로 선 바위와 올레길"},{"name":"쇠소깍","area":"서귀포","lat":33.2522,"lon":126.6237,"indoor":false,"desc":"민물과 바다가 만나는 계곡"},{"name":"중문 대포 주상절리대","area":"서귀포","lat":33.2378,"lon":126.425,"indoor":false,"desc":"육각 기둥 모양 해안 절벽"}]};
+const WEATHER_SAMPLE = {"latitude":33.46,"longitude":126.88,"timezone":"Asia/Seoul",
+ "daily_units":{"time":"iso8601","precipitation_probability_max":"%","temperature_2m_max":"°C"},
+ "daily":{"time":["2026-10-30","2026-10-31"],"precipitation_probability_max":[20,80],"temperature_2m_max":[19.4,16.8]}};
+const SNACK_SAMPLE = `{
+  "반": "초중급 1반",
+  "주문": [
+    { "별명": "한라봉", "간식": "귤빵", "개수": 2, "매운맛": false },
+    { "별명": "돌하르방", "간식": "오메기떡", "개수": 1, "매운맛": false },
+    { "별명": "올레", "간식": "흑돼지 김밥", "개수": 3, "매운맛": true }
+  ]
+}`;
+let WEATHER = JSON.parse(JSON.stringify(WEATHER_SAMPLE));
+let OWN = JSON.parse(SNACK_SAMPLE);
+
+// ───────── 단계 · 미션 ─────────
+// type: pick(서랍 누르기) · expr(한 줄 주소) · code(여러 줄, show) · event(button + show) · choice(퀴즈)
+const STAGES = [
+ {id:1, name:'서랍 열어 보기', v:'data',
+  intro:'<b>JSON = 서랍장.</b> <code>{ }</code> 는 <b>이름표</b> 붙은 서랍, <code>[ ]</code> 는 <b>번호</b> 붙은 서랍이에요. 오늘은 키보드 없이, 서랍을 열고 <b>값을 눌러</b> 보기만 해요.',
+  ms:[
+   {type:'pick', q:'맨 위 서랍 <code>version</code> 의 값을 눌러 보세요.', path:'data.version', hint:'맨 위에 보이는 version : 2 의 숫자 2 를 누르세요.'},
+   {type:'pick', q:'장소 목록 <code>spots</code> 의 <b>첫 번째</b> 장소 이름을 눌러 보세요.', path:'data.spots[0].name', hint:'spots 의 ▶ → [0] 의 ▶ → name 옆 글자를 누르세요.'},
+   {type:'pick', q:'<b>만장굴</b>의 설명(<code>desc</code>)을 찾아 눌러 보세요.', path:'data.spots[3].desc', hint:'spots 안에서 이름 미리보기에 만장굴이 보이는 서랍을 여세요.'},
+   {type:'pick', q:'<b>서귀포</b> 대표 좌표의 첫 번째 숫자(위도)를 눌러 보세요.', path:'data.areas.서귀포[0]', hint:'areas ▶ → 서귀포 ▶ → [0] 의 숫자.'},
+   {type:'pick', q:'<b>이중섭미술관</b>이 실내인지 알려 주는 값을 눌러 보세요.', path:'data.spots[15].indoor', hint:'indoor 는 실내면 true, 야외면 false 예요.'},
+   {type:'pick', q:'<b>용두암</b>이 있는 지역(<code>area</code>)을 눌러 보세요. 주소 칸의 번호를 기억해 두세요!', path:'data.spots[13].area', hint:'spots 안에서 용두암 서랍을 찾으세요 — 몇 번 서랍인가요?'},
+  ]},
+ {id:2, name:'점(.)으로 꺼내기', v:'data',
+  intro:'<b>점(.) = 이름표로 서랍 열기.</b> <code>data.areas</code> 는 “data 안의 areas 서랍”. 한 번 더 점을 찍으면 더 안쪽으로: <code>data.areas.동쪽</code>. 한글 이름표도 점으로 열 수 있어요.',
+  ms:[
+   {type:'expr', q:'<code>version</code> 값을 꺼내 보세요.', ans:'data.version', start:'data.', hint:'data 뒤에 점, 그리고 이름표 version'},
+   {type:'expr', q:'안내 문구 <code>note</code> 를 꺼내 보세요.', ans:'data.note', start:'data.', hint:'data.note'},
+   {type:'expr', q:'지역 서랍 <code>areas</code> 를 통째로 꺼내 보세요.', ans:'data.areas', start:'data.', hint:'서랍째 꺼내면 안쪽이 다 같이 나와요.'},
+   {type:'expr', q:'<b>서귀포</b> 대표 좌표를 꺼내 보세요.', ans:'data.areas.서귀포', start:'data.areas.', hint:'data.areas 뒤에 점 하나 더 + 서귀포'},
+   {type:'expr', q:'<b>제주시</b> 대표 좌표를 꺼내 보세요.', ans:'data.areas.제주시', start:'data.', hint:'바로 앞 문제와 같은 모양, 이름표만 바꿔요.'},
+   {type:'expr', q:'함정! <code>data.Areas.동쪽</code> 을 먼저 그대로 넣어 보고, 무엇이 나오는지 본 다음 <b>바르게 고쳐</b> 동쪽 좌표를 꺼내세요.', ans:'data.areas.동쪽', start:'data.Areas.동쪽', hint:'이름표는 대문자 · 소문자까지 똑같아야 열려요. A → a'},
+  ]},
+ {id:3, name:'번호 [ ] 로 꺼내기', v:'data',
+  intro:'<b>[번호] = 번호 서랍 열기.</b> 번호는 <b>0부터</b> 셉니다. 첫 번째 = <code>[0]</code>, 여섯 번째 = <code>[5]</code>. 몇 칸인지는 <code>.length</code>.',
+  ms:[
+   {type:'expr', q:'첫 번째 장소 서랍을 통째로 꺼내 보세요.', ans:'data.spots[0]', start:'data.spots', hint:'data.spots 뒤에 [0]'},
+   {type:'expr', q:'첫 번째 장소의 <b>이름</b>만 꺼내 보세요.', ans:'data.spots[0].name', start:'data.spots[0]', hint:'번호 서랍을 연 다음, 점으로 이름표 name'},
+   {type:'expr', q:'<b>여섯 번째</b> 장소의 이름을 꺼내 보세요. (0부터 세요!)', ans:'data.spots[5].name', start:'data.spots[', hint:'여섯 번째 = [5]. 0,1,2,3,4,5'},
+   {type:'expr', q:'장소가 <b>모두 몇 곳</b>인지 꺼내 보세요.', ans:'data.spots.length', start:'data.spots', hint:'.length 는 서랍 칸 수'},
+   {type:'expr', q:'<b>마지막</b> 장소의 이름을 꺼내 보세요.', ans:'data.spots[18].name', start:'data.spots[', hint:'19곳이면 마지막 번호는 18 — 또는 [data.spots.length - 1]'},
+   {type:'expr', q:'<b>서쪽</b> 대표 좌표의 <b>두 번째</b> 숫자(경도)를 꺼내 보세요.', ans:'data.areas.서쪽[1]', start:'data.areas.', hint:'이름표 서쪽 → 번호 [1]'},
+   {type:'expr', q:'<b>용두암</b>의 설명(desc)을 꺼내 보세요. (1단계에서 본 번호!)', ans:'data.spots[13].desc', start:'data.spots[', hint:'왼쪽 서랍장에서 용두암 번호를 다시 확인하세요.'},
+  ]},
+ {id:4, name:'반복문으로 전부 꺼내기', v:'data',
+  intro:'<b>for … of = 서랍을 하나씩 꺼내 같은 일 반복.</b> <code>for (const s of data.spots) { … }</code> — s 에 장소 서랍이 하나씩 들어와요. <code>show(값)</code> 은 결과 칸에 한 줄 보여 주기.',
+  ms:[
+   {type:'code', q:'19곳의 <b>이름</b>을 모두 보여 주세요. 빈칸 ___ 을 채우세요.', ans:'for (const s of data.spots) {\n  show(s.name)\n}', start:'for (const s of data.spots) {\n  show(___)\n}', hint:'s 가 장소 서랍 하나 → 이름은 s.name'},
+   {type:'code', q:'“성산일출봉 · 동쪽” 처럼 <b>이름 · 지역</b>을 보여 주세요.', ans:"for (const s of data.spots) {\n  show(s.name + ' · ' + s.area)\n}", start:"for (const s of data.spots) {\n  show(s.name + ' · ' + ___)\n}", hint:'글자 이어 붙이기는 + , 지역은 s.area'},
+   {type:'code', q:'모든 장소의 <b>설명(desc)</b>을 보여 주세요. 이번엔 반복문을 직접 써 봐요.', ans:'for (const s of data.spots) {\n  show(s.desc)\n}', start:'', hint:'1번 문제를 그대로 쓰고 name 만 desc 로'},
+   {type:'code', q:'장소를 하나씩 <b>세어서</b> 마지막에 개수를 보여 주세요.', ans:'let n = 0\nfor (const s of data.spots) {\n  n = n + 1\n}\nshow(n)', start:'let n = 0\nfor (const s of data.spots) {\n  n = ___\n}\nshow(n)', hint:'서랍 하나 꺼낼 때마다 n 에 1 더하기: n = n + 1'},
+   {type:'code', q:'“1. 성산일출봉” 처럼 <b>번호를 붙여</b> 보여 주세요.', ans:"let i = 1\nfor (const s of data.spots) {\n  show(i + '. ' + s.name)\n  i = i + 1\n}", start:"let i = 1\nfor (const s of data.spots) {\n  show(i + '. ' + s.name)\n  ___\n}", hint:'보여 준 다음 i 를 1 올리기'},
+   {type:'code', q:'번호 반복 <code>for (let i = 0; i < 3; i++)</code> 로 <b>처음 3곳</b> 이름만 보여 주세요.', ans:'for (let i = 0; i < 3; i++) {\n  show(data.spots[i].name)\n}', start:'for (let i = 0; i < 3; i++) {\n  show(data.spots[___].name)\n}', hint:'i 가 0 → 1 → 2 로 바뀌어요. 번호 칸에 i'},
+  ]},
+ {id:5, name:'조건으로 골라 꺼내기', v:'data',
+  intro:'<b>if = 체에 거르기.</b> 반복문 안에 <code>if (조건) { … }</code> — 조건이 맞는 서랍만 통과. 같다는 <code>===</code>, 그리고는 <code>&&</code>, 글자 포함은 <code>.includes(\'글자\')</code>.',
+  ms:[
+   {type:'code', q:'<b>동쪽</b> 장소 이름만 보여 주세요.', ans:"for (const s of data.spots) {\n  if (s.area === '동쪽') show(s.name)\n}", start:"for (const s of data.spots) {\n  if (s.area === '___') show(s.name)\n}", hint:"따옴표 안에 지역 이름: '동쪽'"},
+   {type:'code', q:'<b>실내</b> 장소 이름만 보여 주세요. (비 오는 날 코스!)', ans:'for (const s of data.spots) {\n  if (s.indoor === true) show(s.name)\n}', start:'for (const s of data.spots) {\n  if (___) show(s.name)\n}', hint:'실내면 s.indoor 가 true → s.indoor === true'},
+   {type:'code', q:'<b>서귀포 이면서 야외</b>인 곳만 보여 주세요.', ans:"for (const s of data.spots) {\n  if (s.area === '서귀포' && s.indoor === false) show(s.name)\n}", start:"for (const s of data.spots) {\n  if (s.area === '서귀포' && ___) show(s.name)\n}", hint:'&& 는 “그리고”. 야외 = s.indoor === false'},
+   {type:'code', q:'<b>실내가 몇 곳</b>인지 세어서 숫자만 보여 주세요.', ans:'let n = 0\nfor (const s of data.spots) {\n  if (s.indoor === true) n = n + 1\n}\nshow(n)', start:'let n = 0\nfor (const s of data.spots) {\n  if (___) n = n + 1\n}\nshow(n)', hint:'4단계 세기 + 5단계 거르기를 합쳐요.'},
+   {type:'code', q:'이름에 <b>“박물관”</b>이 들어간 곳만 보여 주세요.', ans:"for (const s of data.spots) {\n  if (s.name.includes('박물관')) show(s.name)\n}", start:"for (const s of data.spots) {\n  if (s.name.includes('___')) show(s.name)\n}", hint:"s.name.includes('박물관')"},
+   {type:'code', q:'위도(<code>lat</code>)가 <b>33.5 이상</b>인 북쪽 장소만 이름을 보여 주세요.', ans:'for (const s of data.spots) {\n  if (s.lat >= 33.5) show(s.name)\n}', start:'', hint:'숫자 비교: s.lat >= 33.5'},
+  ]},
+ {id:6, name:'이벤트 — 누르면 꺼내기', v:'data',
+  intro:'<b>이벤트 = “누르면 그때 해 줘”.</b> <code>button(\'이름\', () => { … })</code> — 버튼을 만들고, 누를 때 할 일을 { } 안에 넣어요. 아래 미니 화면의 버튼을 <b>직접 눌러야</b> 통과! (진짜 코드에서는 <code>addEventListener(\'click\', …)</code> · <code>onclick</code> 이 같은 일을 해요.)',
+  ms:[
+   {type:'event', q:'<b>첫 장소</b> 버튼을 누르면 첫 번째 장소 이름이 보이게 하세요. 실행 → 버튼 누르기.', ans:"button('첫 장소', () => {\n  show(data.spots[0].name)\n})", start:"button('첫 장소', () => {\n  show(___)\n})", need:['첫 장소'], hint:'3단계에서 꺼낸 그 주소: data.spots[0].name'},
+   {type:'event', q:'<b>서귀포</b> 버튼을 누르면 서귀포 장소 이름이 모두 보이게 하세요.', ans:"button('서귀포', () => {\n  for (const s of data.spots) {\n    if (s.area === '서귀포') show(s.name)\n  }\n})", start:"button('서귀포', () => {\n  for (const s of data.spots) {\n    if (___) show(s.name)\n  }\n})", need:['서귀포'], hint:"버튼 안에 5단계 거르기를 그대로: s.area === '서귀포'"},
+   {type:'event', q:'버튼 두 개 — <b>비 오는 날</b>(실내만) · <b>맑은 날</b>(야외만). 둘 다 눌러 보세요.', ans:"button('비 오는 날', () => {\n  for (const s of data.spots) {\n    if (s.indoor === true) show(s.name)\n  }\n})\nbutton('맑은 날', () => {\n  for (const s of data.spots) {\n    if (s.indoor === false) show(s.name)\n  }\n})", start:"button('비 오는 날', () => {\n  for (const s of data.spots) {\n    if (s.indoor === true) show(s.name)\n  }\n})\n// 맑은 날 버튼을 아래에 만들어 보세요\n", need:['비 오는 날','맑은 날'], hint:'위 버튼을 복사해서 이름과 true → false 만 바꿔요.'},
+   {type:'event', q:'<b>누를 때마다 숫자가 1씩</b> 올라가는 “누르기” 버튼. 세 번 눌러 1 → 2 → 3 을 확인하세요. (영상 「버튼을 누르면 함수가 일한다」의 count 와 같은 원리)', ans:"let count = 0\nbutton('누르기', () => {\n  count = count + 1\n  show(count)\n})", start:"let count = 0\nbutton('누르기', () => {\n  count = ___\n  show(count)\n})", need:['누르기'], counter:3, hint:'count = count + 1 — 상자(변수)는 버튼 밖에 있어서 기억이 남아요.'},
+   {type:'event', q:'도전! 지역 버튼 4개를 <b>반복문으로</b> 한 번에. 네 버튼을 모두 눌러 보세요. <code>Object.keys(data.areas)</code> = 이름표 목록.', ans:"for (const a of Object.keys(data.areas)) {\n  button(a, () => {\n    for (const s of data.spots) {\n      if (s.area === a) show(s.name)\n    }\n  })\n}", start:"for (const a of Object.keys(data.areas)) {\n  button(a, () => {\n    for (const s of data.spots) {\n      if (s.area === ___) show(s.name)\n    }\n  })\n}", need:['동쪽','서쪽','서귀포','제주시'], hint:'a 에 지역 이름이 하나씩 들어와요 → s.area === a'},
+  ]},
+ {id:7, name:'남의 JSON — 날씨 응답', v:'j',
+  intro:'<b>남이 준 JSON 도 똑같이 꺼내요.</b> 왼쪽은 날씨 API(Open-Meteo)가 돌려주는 모양을 줄인 <b>예시</b>예요(숫자는 연습용). 5일차에 만들 에이전트가 날씨를 꺼낼 때 쓰는 줄 <code>j.daily.precipitation_probability_max[i]</code> — 오늘 미리 읽어 둡니다. 변수 이름은 <code>j</code>.',
+  ms:[
+   {type:'expr', q:'시간대 <code>timezone</code> 을 꺼내 보세요.', ans:'j.timezone', start:'j.', hint:'j.timezone'},
+   {type:'expr', q:'날짜 목록 <code>daily.time</code> 을 꺼내 보세요.', ans:'j.daily.time', start:'j.', hint:'j → daily → time'},
+   {type:'expr', q:'<b>내일</b> 날짜를 꺼내 보세요. (오늘 = [0], 내일 = [1])', ans:'j.daily.time[1]', start:'j.daily.time', hint:'[1]'},
+   {type:'expr', q:'★ <b>내일 강수확률</b>을 꺼내 보세요. 5일차 에이전트가 판단에 쓸 바로 그 숫자!', ans:'j.daily.precipitation_probability_max[1]', start:'j.daily.', hint:'이름표가 길어요 — 왼쪽에서 값을 눌러 주소를 확인해도 OK'},
+   {type:'expr', q:'<b>오늘</b> 최고기온을 꺼내 보세요.', ans:'j.daily.temperature_2m_max[0]', start:'j.daily.', hint:'temperature_2m_max 의 [0]'},
+   {type:'code', q:'번호 반복으로 “2026-10-30 · 비 20%” 처럼 <b>날짜 · 강수확률</b>을 모두 보여 주세요.', ans:"for (let i = 0; i < j.daily.time.length; i++) {\n  show(j.daily.time[i] + ' · 비 ' + j.daily.precipitation_probability_max[i] + '%')\n}", start:"for (let i = 0; i < j.daily.time.length; i++) {\n  show(j.daily.time[i] + ' · 비 ' + ___ + '%')\n}", hint:'날짜와 같은 번호 i 로 강수확률도 꺼내요: j.daily.precipitation_probability_max[i]'},
+   {type:'code', q:'5일차 에이전트의 판단 규칙 미리 보기! 내일 강수확률이 <b>50 이상</b>이면 “실내 위주”, 아니면 “야외도 OK” 를 보여 주세요.', ans:"const p = j.daily.precipitation_probability_max[1]\nif (p >= 50) show('실내 위주')\nelse show('야외도 OK')", start:"const p = ___\nif (p >= 50) show('실내 위주')\nelse show('야외도 OK')", hint:'p 에 내일 강수확률 주소를 넣어요 — 4번 문제의 답'},
+  ]},
+ {id:8, name:'주소 퀴즈', v:'data',
+  intro:'<b>오늘 배운 것 총정리.</b> 왼쪽 서랍장을 보면서 골라도 돼요. 다 맞히면 연습장 졸업!',
+  ms:[
+   {type:'choice', q:'<b>용두암</b>의 설명을 꺼내는 주소는?', opts:['<code>data.spots[13].desc</code>','<code>data.spots[14].desc</code>','<code>data.spots.용두암.desc</code>','<code>data.desc[13]</code>'], a:0, why:'spots 는 번호 서랍 — 용두암은 [13]. 이름으로는 못 열어요.'},
+   {type:'choice', q:'<code>data.spots.length</code> 의 값은?', opts:['19','18','20','spots'], a:0, why:'칸 수는 19. 마지막 번호가 18 이에요.'},
+   {type:'choice', q:'<code>data.spots[0]</code> 은 무엇일까요?', opts:['첫 번째 장소 서랍 통째(이름 · 지역 · 좌표 …)','장소가 0개라는 뜻','“성산일출봉” 글자만','오류'], a:0, why:'번호 서랍을 열면 그 안의 이름표 서랍이 통째로 나와요.'},
+   {type:'choice', q:'동쪽 장소만 거르려면 <code>if ( ? )</code> 에 들어갈 것은?', opts:["<code>s.area === '동쪽'</code>","<code>s.area = '동쪽'</code>","<code>data.area === '동쪽'</code>","<code>s.동쪽</code>"], a:0, why:'같은지 묻기는 === (= 하나는 “넣기”). s 가 지금 꺼낸 장소.'},
+   {type:'choice', q:'버튼을 <b>눌렀을 때만</b> 꺼내게 하려면 꺼내는 줄을 어디에?', opts:["<code>button('…', () => { 여기 })</code> 의 { } 안","반복문 밖 아무 데나","JSON 파일 안","show 앞"], a:0, why:'이벤트: 누를 때 할 일을 { } 안에 맡겨 둬요.'},
+   {type:'choice', q:'<code>j.daily.precipitation_probability_max[1]</code> 은?', opts:['내일 강수확률','오늘 강수확률','내일 최고기온','내일 날짜'], a:0, why:'[1] = 두 번째 = 내일. 이름표가 강수확률.'},
+   {type:'choice', q:'<code>data.areas.동쪽[1]</code> 은?', opts:['동쪽 대표 좌표의 경도(126.88)','동쪽의 위도','두 번째 지역','오류'], a:0, why:'[0] 위도, [1] 경도.'},
+   {type:'choice', q:'<code>data.spots[0].Name</code> 을 넣었더니 <code>undefined</code>. 이유는?', opts:['이름표가 name(소문자)이라 Name 서랍은 없어서','0번 서랍이 비어서','JSON 이 고장 나서','인터넷이 끊겨서'], a:0, why:'undefined = “그런 서랍 없어요”. 철자·대소문자부터 확인!'},
+   {type:'choice', q:'Claude 가 만든 코드에서 <b>“JSON 에서 꺼내는 줄”</b>을 찾는 가장 쉬운 방법은?', opts:['<code>data.</code> · <code>[번호]</code> · <code>.이름표</code> 로 이어진 주소를 찾는다','가장 긴 줄을 찾는다','맨 아래 줄을 본다','function 이 있는 줄만 본다'], a:0, why:'주소 모양(점 · 대괄호)만 찾으면 어떤 코드든 꺼내는 줄이 보여요.'},
+  ]},
+ {id:9, name:'내 JSON 놀이터', v:'data', free:true,
+  intro:'<b>내 JSON 을 넣고 마음껏 꺼내 보세요.</b> 왼쪽 아래 상자에 JSON 을 붙여 넣고 “서랍장으로 보기”. 오른쪽에서 주소 한 줄이나 반복문을 실행할 수 있어요. 변수 이름은 <code>data</code>. (실제 이름 · 전화번호 말고 별명으로!)', ms:[]},
+];
+
+// ───────── 상태 ─────────
+const KEY = 'json-lab-v1';
+let st = {done:{}, stage:1, idx:{}};
+try { const s = JSON.parse(localStorage.getItem(KEY) || 'null'); if (s && s.done) st = Object.assign(st, s); } catch (e) {}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {} }
+const mid = (sg, i) => sg.id + '-' + (i + 1);
+const varData = v => v === 'j' ? WEATHER : (curStage().free ? OWN : SPOTS);
+function curStage() { return STAGES.find(s => s.id === st.stage) || STAGES[0]; }
+
+// ───────── 실행기 (Web Worker — 끝나지 않는 반복도 1.5초 뒤 멈춤) ─────────
+const WSRC = `
+let BTN = {}, OUT = [];
+const fmt = v => typeof v === 'string' ? v : (v === undefined ? 'undefined' : JSON.stringify(v));
+const show = (...a) => { if (OUT.length < 500) OUT.push(a.map(fmt).join(' ')); };
+const button = (label, fn) => { BTN[String(label)] = fn; };
+onmessage = e => {
+  const m = e.data;
+  if (m.click != null) { OUT = []; let err = null; try { BTN[m.click] && BTN[m.click](); } catch (er) { err = String(er && er.message || er); } postMessage({ id: m.id, out: OUT, err }); return; }
+  BTN = {}; OUT = [];
+  try {
+    const body = m.mode === 'expr' ? 'return (' + m.code + '\\n)' : m.code;
+    const f = new Function('data', 'j', 'show', 'button', body);
+    const v = f(m.data, m.j, show, button);
+    let value; if (m.mode === 'expr') value = v === undefined ? { __undef: 1 } : JSON.parse(JSON.stringify(v));
+    let sims = null;
+    if (m.sim) sims = m.sim.map(l => { OUT = []; let err = null; const has = !!BTN[l]; try { has && BTN[l](); } catch (er) { err = String(er.message); } return { l, has, out: OUT.slice(), err }; });
+    const first = OUT; postMessage({ id: m.id, ok: true, value, out: m.sim ? [] : first, buttons: Object.keys(BTN), sims });
+  } catch (er) { postMessage({ id: m.id, ok: false, err: String(er && er.message || er) }); }
+};`;
+let wURL = null; try { wURL = URL.createObjectURL(new Blob([WSRC], { type: 'text/javascript' })); } catch (e) {}
+function makeWorker() { try { return new Worker(wURL); } catch (e) { return null; } }
+let seq = 0;
+function runIn(w, msg) {               // 한 번 실행하고 결과를 기다림
+  return new Promise(res => {
+    if (!w) return res(inlineRun(msg));
+    const id = ++seq; let done = false;
+    const t = setTimeout(() => { if (!done) { done = true; w.terminate(); res({ ok: false, err: '__TIMEOUT', dead: true }); } }, 1500);
+    w.onmessage = e => { if (e.data.id !== id || done) return; done = true; clearTimeout(t); res(e.data); };
+    w.onerror = e => { if (done) return; done = true; clearTimeout(t); e.preventDefault && e.preventDefault(); res({ ok: false, err: e.message || '문법 오류' }); };
+    w.postMessage(Object.assign({ id }, msg));
+  });
+}
+// Worker 를 못 쓰는 환경용(반복 멈춤 장치 없음)
+let IB = {}, IO = [];
+function inlineRun(m) {
+  const fmt = v => typeof v === 'string' ? v : (v === undefined ? 'undefined' : JSON.stringify(v));
+  const show = (...a) => { if (IO.length < 500) IO.push(a.map(fmt).join(' ')); };
+  const button = (l, fn) => { IB[String(l)] = fn; };
+  if (m.click != null) { IO = []; let err = null; try { IB[m.click] && IB[m.click](); } catch (er) { err = String(er.message); } return { out: IO, err }; }
+  IB = {}; IO = [];
+  try {
+    const f = new Function('data', 'j', 'show', 'button', m.mode === 'expr' ? 'return (' + m.code + '\n)' : m.code);
+    const v = f(JSON.parse(JSON.stringify(m.data)), JSON.parse(JSON.stringify(m.j)), show, button);
+    let value; if (m.mode === 'expr') value = v === undefined ? { __undef: 1 } : JSON.parse(JSON.stringify(v));
+    let sims = null; const saved = IB;
+    if (m.sim) sims = m.sim.map(l => { IO = []; let err = null; const has = !!saved[l]; try { has && saved[l](); } catch (er) { err = String(er.message); } return { l, has, out: IO.slice(), err }; });
+    return { ok: true, value, out: m.sim ? [] : IO, buttons: Object.keys(IB), sims };
+  } catch (er) { return { ok: false, err: String(er.message) }; }
+}
+function friendly(err) {
+  if (!err) return '';
+  if (err === '__TIMEOUT') return '반복이 끝나지 않아요(1.5초에서 멈췄어요) — 반복 조건(i < …)이나 i++ 를 확인하세요.';
+  let m;
+  if (/___ is not defined/.test(err)) return '빈칸 ___ 을 아직 채우지 않았어요.';
+  if ((m = err.match(/Cannot read propert(?:y|ies) of (undefined|null) \(reading '([^']*)'\)/))) return `없는 서랍 안에서 '${m[2]}' 를 꺼내려고 했어요 — 앞부분 주소(철자 · 번호)부터 확인하세요.`;
+  if ((m = err.match(/^(\S+) is not defined/))) return `'${m[1]}' 라는 이름을 몰라요 — data(또는 j)로 시작했나요? 글자라면 따옴표 ' ' 를 씌웠나요?`;
+  if (/is not a function/.test(err)) return '함수가 아닌 것을 ( ) 로 불렀어요 — 철자를 확인하세요. (예: includes, show, button)';
+  if (/Unexpected token|Unexpected identifier|missing \) |Invalid or unexpected|Unexpected end|Unexpected string|Unexpected number/.test(err)) return '문법 모양이 어긋났어요 — 괄호 ( ) { } [ ] 와 따옴표 짝, 쉼표를 확인하세요.';
+  if (/Assignment to constant/.test(err)) return 'const 상자에는 다시 넣을 수 없어요 — 바꿀 값이면 let 으로.';
+  return '오류: ' + err;
+}
+
+// ───────── 서랍장(트리) ─────────
+const isId = k => /^[A-Za-z_$가-힣][\w$가-힣]*$/.test(k);
+const pathKey = (p, k) => isId(k) ? p + '.' + k : p + '[' + JSON.stringify(k) + ']';
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+let OPEN = new Set();
+function preview(v) {
+  if (Array.isArray(v)) return `[ ${v.length}칸 ]`;
+  const n = v && (v.name || v['별명'] || v['간식'] || v['이름']);
+  return `{ ${Object.keys(v).length}개 }` + (n ? ' ' + esc(n) : '');
+}
+function leaf(v) {
+  if (typeof v === 'string') return `<span class="s">"${esc(v)}"</span>`;
+  if (typeof v === 'number') return `<span class="n">${v}</span>`;
+  if (typeof v === 'boolean') return `<span class="b">${v}</span>`;
+  return `<span class="b">null</span>`;
+}
+function node(label, v, path) {
+  if (v !== null && typeof v === 'object') {
+    const open = OPEN.has(path);
+    const kids = Array.isArray(v) ? v.map((x, i) => node(`<span class="ix">[${i}]</span>`, x, path + '[' + i + ']'))
+                                  : Object.keys(v).map(k => node(`<span class="k">${esc(k)}</span>`, v[k], pathKey(path, k)));
+    return `<li><span class="tg" data-p="${esc(path)}">${open ? '▼' : '▶'}</span>${label} <span class="v box" data-p="${esc(path)}">${open ? (Array.isArray(v) ? '[' : '{') : ''}</span><span class="pv">${open ? '' : preview(v)}</span>${open ? '<ul>' + kids.join('') + '</ul>' : ''}</li>`;
+  }
+  return `<li><span class="tg"></span>${label} : <span class="v" data-p="${esc(path)}">${leaf(v)}</span></li>`;
+}
+let SEL = null;
+function drawTree() {
+  const sg = curStage(), v = sg.v, d = varData(v);
+  document.getElementById('treeTitle').textContent = '서랍장 보기 — ' + v;
+  const t = document.getElementById('tree');
+  t.innerHTML = '<ul>' + (Array.isArray(d) ? d.map((x, i) => node(`<span class="ix">[${i}]</span>`, x, v + '[' + i + ']')) : Object.keys(d).map(k => node(`<span class="k">${esc(k)}</span>`, d[k], pathKey(v, k)))).join('') + '</ul>';
+  if (SEL) { const el = t.querySelector(`.v[data-p="${CSS.escape(SEL)}"]`); if (el) el.classList.add('sel'); }
+  const tools = document.getElementById('treeTools');
+  tools.innerHTML = '<button data-a="openAll">모두 펼치기</button><button data-a="closeAll">모두 접기</button>' +
+    (v === 'j' ? '<button data-a="live">진짜 날씨 불러오기(동쪽)</button><button data-a="sample">예시로 되돌리기</button>' : '') +
+    (sg.free ? '' : '');
+  if (sg.free) {
+    tools.innerHTML += `<div style="width:100%"><div class="tiny" style="margin:8px 0 4px">내 JSON (붙여 넣거나 고치세요)</div><textarea id="own"></textarea>
+      <div class="row"><button class="go" id="ownLoad">서랍장으로 보기</button><button class="ghost" id="ownReset">예시(간식 주문)로</button></div><div class="tiny" id="ownMsg"></div></div>`;
+    const ta = document.getElementById('own'); ta.value = st.own || SNACK_SAMPLE;
+    document.getElementById('ownLoad').onclick = () => loadOwn(ta.value);
+    document.getElementById('ownReset').onclick = () => { ta.value = SNACK_SAMPLE; loadOwn(SNACK_SAMPLE); };
+  }
+}
+function getAt(path) {
+  try { return new Function('data', 'j', 'return ' + path)(varData('data'), WEATHER); } catch (e) { return undefined; }
+}
+function allPaths(v, p, out) { if (v && typeof v === 'object') { out.push(p); (Array.isArray(v) ? v.map((_, i) => p + '[' + i + ']') : Object.keys(v).map(k => pathKey(p, k))).forEach((q, i) => allPaths(Array.isArray(v) ? v[i] : v[Object.keys(v)[i]], q, out)); } return out; }
+document.getElementById('tree').addEventListener('click', e => {
+  const tg = e.target.closest('.tg'); const vv = e.target.closest('.v');
+  if (tg && tg.dataset.p) { const p = tg.dataset.p; OPEN.has(p) ? OPEN.delete(p) : OPEN.add(p); drawTree(); return; }
+  if (vv) {
+    const p = vv.dataset.p; SEL = p; const val = getAt(p);
+    document.getElementById('addr').innerHTML = `<span class="lab">이 자리의 주소</span><br><span class="p">${esc(p)}</span><br><span class="lab">꺼내면 →</span> ${esc(typeof val === 'object' ? (Array.isArray(val) ? '[ ' + val.length + '칸 ]' : '{ 서랍 }') : JSON.stringify(val))}`;
+    drawTree(); onPick(p);
+  }
+});
+document.getElementById('treeTools').addEventListener('click', async e => {
+  const a = e.target.dataset && e.target.dataset.a; if (!a) return;
+  const sg = curStage(), d = varData(sg.v);
+  if (a === 'openAll') allPaths(d, sg.v, []).forEach(p => OPEN.add(p));
+  if (a === 'closeAll') OPEN.clear();
+  if (a === 'sample') { WEATHER = JSON.parse(JSON.stringify(WEATHER_SAMPLE)); flash('예시 응답으로 되돌렸어요.'); }
+  if (a === 'live') {
+    try {
+      const r = await fetch('https://api.open-meteo.com/v1/forecast?latitude=33.46&longitude=126.88&daily=precipitation_probability_max,temperature_2m_max&timezone=Asia%2FSeoul&forecast_days=2');
+      if (!r.ok) throw 0; WEATHER = await r.json(); flash('진짜 예보를 불러왔어요(Open-Meteo · 동쪽). 정답도 이 숫자로 바뀌어요.');
+    } catch (er) { flash('진짜 날씨를 불러오지 못했어요 — 예시 응답으로 계속해요.'); }
+  }
+  drawTree();
+});
+function flash(t) { document.getElementById('addr').innerHTML = `<span class="lab">알림</span><br>${esc(t)}`; }
+function loadOwn(txt) {
+  const msg = document.getElementById('ownMsg');
+  try { OWN = JSON.parse(txt); st.own = txt; save(); OPEN = new Set(['data']); msg.textContent = '✓ 서랍장으로 바꿨어요.'; SEL = null; drawTree(); document.getElementById('ownMsg').textContent = '✓ 서랍장으로 바꿨어요.'; }
+  catch (e) { const m = String(e.message).match(/position (\d+)/); let where = '';
+    if (m) { const pos = +m[1]; where = ' (' + (txt.slice(0, pos).split('\n').length) + '째 줄 근처)'; }
+    msg.textContent = '✗ JSON 모양이 어긋났어요' + where + ' — 쉼표 , · 큰따옴표 " " · 괄호 { } [ ] 짝을 확인하세요. 이름표는 꼭 큰따옴표!'; }
+}
+
+// ───────── 미션 화면 ─────────
+let play = null;                       // 이벤트 미니 화면용 Worker
+let clickCount = {};
+function drawTabs() {
+  document.getElementById('tabs').innerHTML = STAGES.map(s => {
+    const n = s.ms.length, d = s.ms.filter((_, i) => st.done[mid(s, i)]).length;
+    return `<button data-s="${s.id}" class="${s.id === st.stage ? 'on' : ''} ${n && d === n ? 'all' : ''}">${s.free ? '🧪' : s.id + '단계'} ${esc(s.name)}${n ? `<span class="c">${d}/${n}</span>` : ''}</button>`;
+  }).join('');
+  const tot = STAGES.reduce((a, s) => a + s.ms.length, 0), got = Object.keys(st.done).length;
+  document.getElementById('stars').textContent = `⭐ ${got} / ${tot} 미션 통과`;
+}
+document.getElementById('tabs').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  st.stage = +b.dataset.s; save(); OPEN = new Set([curStage().v]); SEL = null;
+  document.getElementById('addr').innerHTML = '<span class="lab">주소 — 값을 하나 눌러 보세요</span>';
+  drawAll();
+});
+function curIdx() { const sg = curStage(); let i = st.idx[sg.id] || 0; return Math.min(i, Math.max(0, sg.ms.length - 1)); }
+function drawMission() {
+  const sg = curStage(), box = document.getElementById('mission');
+  if (play) { play.terminate(); play = null; }
+  clickCount = {};
+  if (sg.free) { drawFree(box, sg); return; }
+  const i = curIdx(), m = sg.ms[i], id = mid(sg, i);
+  const allDone = sg.ms.every((_, k) => st.done[mid(sg, k)]);
+  let h = `<div class="intro">${sg.intro}</div><div class="mlist">` + sg.ms.map((_, k) =>
+    `<button data-i="${k}" class="${k === i ? 'on' : ''} ${st.done[mid(sg, k)] ? 'ok' : ''}">${st.done[mid(sg, k)] ? '✓' : k + 1}</button>`).join('') + '</div>';
+  h += `<div class="q"><span class="no">${id}</span>${m.q}</div>`;
+  if (m.type === 'pick') h += `<div class="note">👈 왼쪽 서랍장에서 값을 눌러요. (▶ 로 서랍 열기)</div>`;
+  if (m.type === 'expr') h += `<input class="expr" id="inp" spellcheck="false" autocomplete="off" value="${esc(st['e' + id] != null ? st['e' + id] : m.start)}"><div class="note">Enter 또는 “꺼내기”. 한 줄 주소만 써요.</div>`;
+  if (m.type === 'code' || m.type === 'event') h += `<textarea id="inp" spellcheck="false">${esc(st['e' + id] != null ? st['e' + id] : m.start)}</textarea><div class="note">Ctrl + Enter 로도 실행돼요. <code>show(값)</code> = 한 줄 보여 주기${m.type === 'event' ? ' · <code>button(\'이름\', () => { … })</code> = 버튼 만들기' : ''}</div>`;
+  if (m.type === 'choice') h += `<div class="opts" id="opts">${m.opts.map((o, k) => `<button data-k="${k}">${String.fromCharCode(9312 + k)} ${o}</button>`).join('')}</div>`;
+  h += `<div class="row">` + (m.type === 'expr' ? '<button class="go" id="run">꺼내기</button>' : (m.type === 'code' || m.type === 'event') ? '<button class="go" id="run">실행</button>' : '') +
+       (m.type !== 'choice' ? '<button class="ghost" id="hintB">힌트</button><button class="ghost" id="ansB">정답 보기</button>' : '') +
+       (m.type === 'expr' || m.type === 'code' || m.type === 'event' ? '<button class="ghost" id="resetB">처음 코드로</button>' : '') +
+       `<button class="ghost" id="nextB">다음 ▶</button></div>`;
+  h += `<div class="hint" id="hint"></div>`;
+  if (m.type === 'event') h += `<div class="screen" id="screen"><div class="bar">미니 화면 — 버튼을 눌러 보세요</div><div class="btns" id="btns"></div><div class="out" id="sout"><div class="empty">아직 아무것도 안 보여요</div></div></div>`;
+  h += `<div class="res" id="res"></div>`;
+  if (allDone) h += `<div class="res on ok"><div class="t">🎉 ${sg.id}단계 모두 통과!</div>${sg.id < 8 ? '위쪽 탭에서 다음 단계로 가세요.' : '연습장 졸업! 🧪 놀이터에서 내 JSON 을 꺼내 보세요.'}</div>`;
+  box.innerHTML = h;
+  box.querySelectorAll('.mlist button').forEach(b => b.onclick = () => { st.idx[sg.id] = +b.dataset.i; save(); drawMission(); });
+  const inp = document.getElementById('inp');
+  if (inp) {
+    inp.addEventListener('input', () => { st['e' + id] = inp.value; save(); });
+    inp.addEventListener('keydown', e => {
+      if (m.type === 'expr' && e.key === 'Enter') { e.preventDefault(); check(); }
+      if (m.type !== 'expr' && e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); check(); }
+      if (m.type !== 'expr' && e.key === 'Tab') { e.preventDefault(); const s = inp.selectionStart; inp.setRangeText('  ', s, inp.selectionEnd, 'end'); }
+    });
+  }
+  const g = id => document.getElementById(id);
+  if (g('run')) g('run').onclick = check;
+  if (g('hintB')) g('hintB').onclick = () => { const hb = g('hint'); hb.innerHTML = '💡 ' + esc(m.hint); hb.classList.add('on'); };
+  if (g('ansB')) g('ansB').onclick = () => { const hb = g('hint'); hb.innerHTML = m.type === 'pick' ? '정답 주소: <pre>' + esc(m.path) + '</pre>' : '정답 예시 (다르게 써도 결과가 같으면 정답):<pre>' + esc(m.ans) + '</pre>'; hb.classList.add('on'); };
+  if (g('resetB')) g('resetB').onclick = () => { delete st['e' + id]; save(); drawMission(); };
+  g('nextB').onclick = () => { st.idx[sg.id] = (i + 1) % sg.ms.length; save(); drawMission(); };
+  if (m.type === 'choice') g('opts').querySelectorAll('button').forEach(b => b.onclick = () => {
+    const k = +b.dataset.k, r = g('res');
+    g('opts').querySelectorAll('button').forEach(x => x.classList.remove('right', 'wrong'));
+    if (k === m.a) { b.classList.add('right'); pass(id, r, m.why); } else { b.classList.add('wrong'); fail(r, '다시 골라 보세요.', '💡 ' + m.why.split('—')[0].split('.')[0] + ' …?'); }
+  });
+}
+function show(r, cls, html) { r.className = 'res on ' + cls; r.innerHTML = html; }
+function pass(id, r, extra) {
+  const first = !st.done[id]; st.done[id] = 1; save();
+  show(r, 'ok', `<div class="t">✓ 정답!${first ? ' ⭐ +1' : ''}</div>${extra || ''}`);
+  drawTabs(); document.querySelectorAll('.mlist button').forEach(b => { const sg = curStage(); if (st.done[mid(sg, +b.dataset.i)]) { b.classList.add('ok'); b.textContent = '✓'; } });
+}
+function fail(r, t, extra) { show(r, 'bad', `<div class="t">✗ ${esc(t)}</div>${extra || ''}`); }
+const pretty = v => v && v.__undef ? 'undefined  ← 그런 서랍이 없어요' : JSON.stringify(v, null, 2);
+const norm = a => (a || []).map(x => String(x).replace(/\s+/g, ''));
+function onPick(p) {
+  const sg = curStage(); if (sg.free) return;
+  const i = curIdx(), m = sg.ms[i]; if (!m || m.type !== 'pick') return;
+  const r = document.getElementById('res');
+  if (p === m.path) pass(mid(sg, i), r, `주소 <code>${esc(p)}</code> — 다음 단계에서 이 주소를 직접 써요.`);
+  else fail(r, '그 자리가 아니에요.', `누른 곳: <code>${esc(p)}</code>`);
+}
+async function check() {
+  const sg = curStage(), i = curIdx(), m = sg.ms[i], id = mid(sg, i), code = document.getElementById('inp').value, r = document.getElementById('res');
+  const base = { data: varData('data'), j: WEATHER };
+  if (m.type === 'expr' || m.type === 'code') {
+    const mode = m.type === 'expr' ? 'expr' : 'code';
+    const w = makeWorker();
+    const [mine, exp] = [await runIn(w, Object.assign({ code, mode }, base)), await runIn(makeWorker(), Object.assign({ code: m.ans, mode }, base))];
+    if (w) w.terminate();
+    if (!mine.ok) return fail(r, friendly(mine.err));
+    if (mode === 'expr') {
+      const ok = JSON.stringify(mine.value) === JSON.stringify(exp.value);
+      const got = `<pre>${esc(pretty(mine.value))}</pre>`;
+      return ok ? pass(id, r, '꺼낸 값:' + got) : fail(r, mine.value && mine.value.__undef ? '그런 서랍이 없어요(undefined) — 철자 · 대소문자 · 번호를 확인하세요.' : '꺼내긴 했는데, 찾는 값이 아니에요.', '내가 꺼낸 값:' + got);
+    }
+    const ok = JSON.stringify(norm(mine.out)) === JSON.stringify(norm(exp.out));
+    const mineTxt = mine.out.length ? mine.out.join('\n') : '(아무것도 안 보여 줬어요 — show 를 썼나요?)';
+    if (ok) return pass(id, r, `<pre>${esc(mineTxt)}</pre>`);
+    let k = 0; const a = norm(mine.out), b = norm(exp.out); while (k < a.length && k < b.length && a[k] === b[k]) k++;
+    const why = a.length !== b.length && k === Math.min(a.length, b.length) ? `줄 수가 달라요 — 나: ${a.length}줄 · 기대: ${b.length}줄` : `${k + 1}번째 줄부터 달라요`;
+    return fail(r, why, `<div class="cmp"><div><b>내 결과</b><pre>${esc(mineTxt)}</pre></div><div><b>기대하는 결과</b><pre>${esc(exp.out.join('\n'))}</pre></div></div>`);
+  }
+  if (m.type === 'event') {
+    if (play) play.terminate();
+    play = makeWorker(); clickCount = {};
+    const res = await runIn(play, Object.assign({ code, mode: 'code' }, base));
+    if (res.dead) play = null;
+    const scr = document.getElementById('screen'); scr.classList.add('on');
+    if (!res.ok) { document.getElementById('btns').innerHTML = ''; return fail(r, friendly(res.err)); }
+    const exp = await runIn(makeWorker(), Object.assign({ code: m.ans, mode: 'code', sim: m.need }, base));
+    const missing = m.need.filter(l => !res.buttons.includes(l));
+    document.getElementById('btns').innerHTML = res.buttons.map(l => `<button data-l="${esc(l)}">${esc(l)}</button>`).join('') || '<span class="empty">버튼이 없어요 — button(…) 을 썼나요?</span>';
+    document.getElementById('sout').innerHTML = res.out.length ? res.out.map(x => `<div>${esc(x)}</div>`).join('') : '<div class="empty">아직 아무것도 안 보여요 — 버튼을 눌러 보세요</div>';
+    const okSet = new Set();
+    if (missing.length) fail(r, `버튼 “${missing.join('”, “')}” 이(가) 없어요.`, '버튼 이름(따옴표 안 글자)이 정확히 같은지 확인하세요.');
+    else show(r, '', `<div class="t">버튼이 생겼어요! 이제 미니 화면에서 <b>${m.need.map(esc).join(' · ')}</b> 을(를) 눌러 보세요.${m.counter ? ` (${m.counter}번)` : ''}</div>`);
+    document.getElementById('btns').querySelectorAll('button').forEach(b => b.onclick = async () => {
+      const l = b.dataset.l;
+      const c = await runIn(play, { click: l });
+      if (c.dead) { play = null; return fail(r, friendly('__TIMEOUT')); }
+      const so = document.getElementById('sout');
+      so.innerHTML = (c.out.length ? c.out.map(x => `<div>${esc(x)}</div>`).join('') : '<div class="empty">눌렀는데 아무것도 안 보여요 — 버튼 안에 show 가 있나요?</div>') + (c.err ? `<div style="color:var(--bad)">${esc(friendly(c.err))}</div>` : '');
+      if (!m.need.includes(l) || missing.length) return;
+      clickCount[l] = (clickCount[l] || 0) + 1;
+      let good;
+      if (m.counter) good = c.out.length === 1 && String(c.out[0]).trim() === String(clickCount[l]);
+      else { const e = exp.sims.find(s => s.l === l); good = JSON.stringify(norm(c.out)) === JSON.stringify(norm(e.out)); }
+      if (!good) { b.classList.remove('done'); const e = exp.sims && exp.sims.find(s => s.l === l);
+        return fail(r, `“${l}” 을 눌렀는데 기대와 달라요.`, m.counter ? `${clickCount[l]}번째 누름 → ${clickCount[l]} 이 보여야 해요. 다시 실행해서 처음부터 눌러 보세요.` : `<div class="cmp"><div><b>내 화면</b><pre>${esc(c.out.join('\n'))}</pre></div><div><b>기대</b><pre>${esc(e.out.join('\n'))}</pre></div></div>`); }
+      if (m.counter && clickCount[l] < m.counter) { show(r, '', `<div class="t">좋아요! ${clickCount[l]} — ${m.counter - clickCount[l]}번 더 눌러 보세요.</div>`); return; }
+      b.classList.add('done'); okSet.add(l);
+      const left = m.need.filter(x => !okSet.has(x));
+      if (!left.length) pass(id, r, '누를 때마다 { } 안의 일이 다시 실행됐어요 — 이게 이벤트!');
+      else show(r, '', `<div class="t">✓ “${esc(l)}” 통과! 남은 버튼: ${left.map(esc).join(' · ')}</div>`);
+    });
+  }
+}
+// ───────── 놀이터 ─────────
+function drawFree(box, sg) {
+  box.innerHTML = `<div class="intro">${sg.intro}</div>
+   <div class="q">주소 한 줄 꺼내기</div><input class="expr" id="fx" spellcheck="false" value="${esc(st.fx || 'data.주문[0].간식')}"><div class="row"><button class="go" id="fxB">꺼내기</button></div><div class="res" id="fxR"></div>
+   <div class="q" style="margin-top:18px">여러 줄 · 반복문 · 버튼</div><textarea id="fc" spellcheck="false">${esc(st.fc || "for (const o of data.주문) {\n  if (o.매운맛 === false) show(o.별명 + ' · ' + o.간식 + ' ' + o.개수 + '개')\n}\nbutton('매운맛만', () => {\n  for (const o of data.주문) {\n    if (o.매운맛) show(o.간식)\n  }\n})")}</textarea>
+   <div class="row"><button class="go" id="fcB">실행</button></div>
+   <div class="screen on" id="screen"><div class="bar">결과 · 미니 화면</div><div class="btns" id="btns"></div><div class="out" id="sout"><div class="empty">실행해 보세요</div></div></div>
+   <div class="note" style="margin-top:12px">💡 아이디어 — 내 JSON 에 항목을 2개 더 넣고, 개수(숫자)를 모두 더해 보여 주기 · 분류 버튼 만들기 · 숫자가 가장 큰 항목 찾기.</div>`;
+  const fx = document.getElementById('fx'), fc = document.getElementById('fc');
+  fx.oninput = () => { st.fx = fx.value; save(); }; fc.oninput = () => { st.fc = fc.value; save(); };
+  const runX = async () => { const w = makeWorker(); const r = await runIn(w, { code: fx.value, mode: 'expr', data: OWN, j: WEATHER }); if (w) w.terminate();
+    const R = document.getElementById('fxR'); r.ok ? show(R, 'ok', `<pre>${esc(pretty(r.value))}</pre>`) : fail(R, friendly(r.err)); };
+  fx.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); runX(); } };
+  document.getElementById('fxB').onclick = runX;
+  const runC = async () => { if (play) play.terminate(); play = makeWorker();
+    const r = await runIn(play, { code: fc.value, mode: 'code', data: OWN, j: WEATHER }); if (r.dead) play = null;
+    const so = document.getElementById('sout'), bt = document.getElementById('btns');
+    if (!r.ok) { bt.innerHTML = ''; so.innerHTML = `<div style="color:var(--bad)">${esc(friendly(r.err))}</div>`; return; }
+    so.innerHTML = r.out.length ? r.out.map(x => `<div>${esc(x)}</div>`).join('') : '<div class="empty">보여 준 것이 없어요</div>';
+    bt.innerHTML = r.buttons.map(l => `<button data-l="${esc(l)}">${esc(l)}</button>`).join('');
+    bt.querySelectorAll('button').forEach(b => b.onclick = async () => { const c = await runIn(play, { click: b.dataset.l }); if (c.dead) { play = null; so.innerHTML = esc(friendly('__TIMEOUT')); return; }
+      so.innerHTML = (c.out.length ? c.out.map(x => `<div>${esc(x)}</div>`).join('') : '<div class="empty">보여 준 것이 없어요</div>') + (c.err ? `<div style="color:var(--bad)">${esc(friendly(c.err))}</div>` : ''); }); };
+  fc.onkeydown = e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); runC(); } if (e.key === 'Tab') { e.preventDefault(); const s = fc.selectionStart; fc.setRangeText('  ', s, fc.selectionEnd, 'end'); } };
+  document.getElementById('fcB').onclick = runC;
+}
+function drawAll() { drawTabs(); drawTree(); drawMission(); }
+if (st.own) { try { OWN = JSON.parse(st.own); } catch (e) {} }
+OPEN = new Set([curStage().v]);
+drawAll();
+</script>
+</body></html>
