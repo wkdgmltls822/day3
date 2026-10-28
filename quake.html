@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>실시간 지진 지도</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <style>
+        body { margin: 0; font-family: sans-serif; background: #0b1020; color: #e8ecf5; }
+        #bar { padding: 10px 14px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+        #bar h1 { font-size: 18px; margin: 0; }
+        button, select { padding: 6px 10px; border-radius: 6px; border: 1px solid #3a4468; background: #18203a; color: #e8ecf5; }
+        #stat, #clock { font-size: 14px; color: #9fb0d8; }
+        #map { height: 68vh; background: #0b1020; }
+        #list { margin: 10px 14px; font-size: 14px; }
+        .dark-tiles { filter: invert(1) hue-rotate(180deg) brightness(.85) contrast(.9); }
+        /* 지진 원: 안쪽 점 + 번져 나가는 링 */
+        .eq { position: relative; }
+        .eq .dot { position: absolute; inset: 0; border-radius: 50%; opacity: .75; }
+        .eq .ring { position: absolute; inset: 0; border-radius: 50%; border: 2px solid; animation: ring 1.8s ease-out 1; }
+        .eq.big .ring { animation-iteration-count: infinite; }
+        @keyframes ring { from { transform: scale(1); opacity: .9; } to { transform: scale(3); opacity: 0; } }
+    </style>
+</head>
+<body>
+    <div id="bar">
+        <h1>🌍 지금 지구의 지진</h1>
+        <select id="minmag">
+            <option value="0">모든 규모</option>
+            <option value="2.5" selected>규모 2.5 이상</option>
+            <option value="4.5">규모 4.5 이상</option>
+        </select>
+        <button id="play">▶ 최근 24시간 재생</button>
+        <span id="clock"></span>
+        <span id="stat"></span>
+    </div>
+    <div id="map"></div>
+    <ol id="list"></ol>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // USGS 지진 피드(키 없음): 최근 24시간 모든 지진
+        const FEED = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson"
+        let quakes = []      // 시간 오름차순, 필터 적용된 목록
+        let markers = []     // quakes 와 같은 순서의 마커
+        let shown = 0        // 지금 지도에 올라간 개수
+        let timer = null
+
+        const map = L.map("map", { worldCopyJump: true }).setView([20, 20], 2)
+        // 키 없는 OSM 타일을 CSS 필터로 어둡게 바꿔서 쓴다
+        L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            attribution: "© OpenStreetMap | 데이터: USGS", maxZoom: 8, className: "dark-tiles" }).addTo(map)
+        const layer = L.layerGroup().addTo(map)
+
+        // 규모별 색과 크기
+        const color = m => m >= 6 ? "#ff3b3b" : m >= 4.5 ? "#ff9f1c" : m >= 2.5 ? "#ffd60a" : "#6ee7b7"
+        const size = m => Math.min(6 + Math.pow(Math.max(m, 0.5), 2) * 2.2, 90)
+
+        const makeMarker = q => {
+            const m = q.properties.mag, s = size(m), c = color(m)
+            const icon = L.divIcon({
+                className: "",
+                iconSize: [s, s],
+                html: `<div class="eq ${m >= 4.5 ? "big" : ""}" style="width:${s}px;height:${s}px">
+                         <div class="dot" style="background:${c}"></div>
+                         <div class="ring" style="border-color:${c}"></div></div>`
+            })
+            const [lon, lat] = q.geometry.coordinates
+            return L.marker([lat, lon], { icon }).bindPopup(
+                `<b>M ${m}</b> ${q.properties.place}<br>${new Date(q.properties.time).toLocaleString("ko-KR")}<br>
+                 <a href="${q.properties.url}" target="_blank">USGS 상세</a>`)
+        }
+
+        // 앞에서 k개만 지도에 올린다 (재생 중에는 하나씩 늘어남)
+        const showCount = k => {
+            while (shown < k) layer.addLayer(markers[shown++])
+            while (shown > k) layer.removeLayer(markers[--shown])
+            clock.textContent = k && k < quakes.length
+                ? new Date(quakes[k - 1].properties.time).toLocaleTimeString("ko-KR") + " 기준" : ""
+        }
+
+        const load = async () => {
+            stat.textContent = "불러오는 중..."
+            try {
+                const data = await (await fetch(FEED)).json()
+                const min = Number(minmag.value)
+                quakes = data.features.filter(q => q.properties.mag >= min)
+                    .sort((a, b) => a.properties.time - b.properties.time)
+                layer.clearLayers(); shown = 0
+                markers = quakes.map(makeMarker)
+                showCount(quakes.length)
+
+                const top = [...quakes].sort((a, b) => b.properties.mag - a.properties.mag).slice(0, 5)
+                stat.textContent = `${quakes.length}건 · 최대 규모 ${top.length ? top[0].properties.mag : "-"}`
+                list.innerHTML = top.map(q => `<li>M ${q.properties.mag} - ${q.properties.place}</li>`).join("")
+            } catch (e) {
+                stat.textContent = "지진 데이터를 불러오지 못했습니다."
+            }
+        }
+
+        play.onclick = () => {
+            if (timer) { clearInterval(timer); timer = null; play.textContent = "▶ 최근 24시간 재생"; showCount(quakes.length); return }
+            play.textContent = "⏹ 정지"
+            showCount(0)
+            // 약 15초 안에 끝나도록 한 번에 올리는 개수를 정한다
+            const step = Math.max(1, Math.ceil(quakes.length / 150))
+            timer = setInterval(() => {
+                showCount(Math.min(shown + step, quakes.length))
+                if (shown >= quakes.length) { clearInterval(timer); timer = null; play.textContent = "▶ 최근 24시간 재생" }
+            }, 100)
+        }
+
+        minmag.onchange = () => { if (timer) play.onclick(); load() }
+        load()
+        setInterval(() => { if (!timer) load() }, 5 * 60 * 1000)   // 5분마다 갱신
+    </script>
+</body>
+</html>
